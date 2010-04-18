@@ -80,6 +80,13 @@ class Vertex(object):
 		self.connectivity3 = -1
 		self.sorting_label = -1
 
+	def getConnectivity1(self):
+		"""
+		Return the `connectivity1` attribute of the vertex. Useful for sorting
+		vertices by connectivity.
+		"""
+		return self.connectivity1
+
 def __getSortLabel(vertex):
 	"""
 	Used to sort vertices prior to poposing candidate pairs in :method:`__VF2_pairs`

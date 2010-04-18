@@ -786,6 +786,13 @@ class Atom(graph.Vertex):
 		"""
 		return len(self.label) > 0
 
+	def getLabel(self):
+		"""
+		Return the `label` attribute of the atom. Useful for sorting atoms by
+		label.
+		"""
+		return self.label
+
 	def getElement(self):
 		"""
 		Return the element that this atom represents. If there are multiple

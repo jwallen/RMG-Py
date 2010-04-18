@@ -43,6 +43,8 @@ cdef class Vertex(object):
 
 	cpdef resetCachedStructureInfo(Vertex self)
 
+	cpdef short getConnectivity1(Vertex self)
+
 cpdef int __getSortLabel(Vertex vertex) except -2 # values should increment from 0
 
 cpdef short globalAtomSortValue(Vertex atom) except 1 # all values should be negative
@@ -77,13 +79,13 @@ cdef class Graph(dict):
 
 	cpdef removeEdge(Graph self, vertices)
 
-	cpdef isIsomorphic(Graph self, Graph other, dict map12_0, dict map21_0)
+	cpdef bint isIsomorphic(Graph self, Graph other, dict map12_0, dict map21_0)
 
-	cpdef findIsomorphism(Graph self, Graph other, dict map12_0, dict map21_0)
+	cpdef tuple findIsomorphism(Graph self, Graph other, dict map12_0, dict map21_0)
 
-	cpdef isSubgraphIsomorphic(Graph self, Graph other, dict map12_0, dict map21_0)
+	cpdef bint isSubgraphIsomorphic(Graph self, Graph other, dict map12_0, dict map21_0)
 
-	cpdef findSubgraphIsomorphisms(Graph self, Graph other, dict map12_0, dict map21_0)
+	cpdef tuple findSubgraphIsomorphisms(Graph self, Graph other, dict map12_0, dict map21_0)
 
 	cpdef Graph copy(Graph self)
 

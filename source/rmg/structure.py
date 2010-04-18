@@ -296,20 +296,8 @@ class Structure:
 			smilesstr = str(document.getElementText(rootElement)).strip()
 			self.fromSMILES(smilesstr)
 		else:
-			raise io.InvalidInputFileException('Invalid format "%s" for structure element; allowed values are "cml", "inchi", and "smiles".' % format)
+			raise Exception('Invalid format "%s" for structure element; allowed values are "cml", "inchi", and "smiles".' % format)
 		
-	def toXML(self, document, rootElement):
-		"""
-		Create a <structure> element as a child of `rootElement` in the XML DOM
-		tree represented by `document`, an :class:`io.XML` class. The format
-		matches the format of the :meth:`Species.fromXML()` function. Currently
-		the structure is represented using InChI.
-		"""
-		
-		# Create <structure> element with format attribute
-		structureElement = document.createTextElement('structure', rootElement, self.toInChI())
-		document.createAttribute('format', structureElement, 'InChI')
-
 	def fromAdjacencyList(self, adjlist, addH=False, withLabel=True):
 		"""
 		Convert a string adjacency list `adjlist` into a structure object.
@@ -519,12 +507,12 @@ class Structure:
 		# some function of connectivity values), from lowest to highest
 		atoms.sort(key=graph.globalAtomSortValue)
 		#  sort by label
-		atoms.sort(key=lambda atom: atom.label )
+		atoms.sort(key=chem.Atom.getLabel)
 		# then bring labeled atoms to the top (else '' will be before '*1')
 		atoms.sort(key=chem.Atom.isCenter, reverse=True) 
 		# Sort the atoms by graph.globalAtomSortValue 
 		# (some function of connectivity values), from lowest to highest
-		atoms.sort(key=lambda atom: atom.connectivity1, reverse=True)
+		atoms.sort(key=chem.Atom.getConnectivity1, reverse=True)
 		#atoms.sort(key=graph.globalAtomSortValue)
 		# now make sure the hydrogens come last, in case we wish to strip them!
 		atoms.sort(key=chem.Atom.isHydrogen )
@@ -648,7 +636,7 @@ class Structure:
 		structureElement = document.createTextElement('structure', rootElement, self.toSMILES())
 		document.createAttribute('format', structureElement, 'SMILES')
 
-	def toDOT(self, label=''):
+	def toDOT(self):
 		"""
 		Convert a Structure object to a graph image via DOT. This is useful
 		for visualizing the functional groups that make up the databases. The
