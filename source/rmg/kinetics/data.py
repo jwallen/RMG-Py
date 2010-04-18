@@ -774,10 +774,6 @@ class ReactionFamily(data.Database):
 
 					kinetics = ArrheniusEPModel()
 					kinetics.fromDatabase(kineticData, comment, len(self.template.reactants))
-					kinetics.family = self
-					kinetics.label = label
-					kinetics.index = index
-					#kinetics.comment = self.label + ' ' + label + ' ' + kinetics.comment
 					self.library[label] = kinetics
 
 				except (ValueError, IndexError), e:

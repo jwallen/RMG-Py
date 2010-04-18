@@ -79,7 +79,7 @@ class KineticsModel:
 		self.Pmax = Pmax
 		self.rank = 0
 		self.comment = ''
-		self.numReactants = None
+		self.numReactants = 0
 
 	def isTemperatureInRange(self, T):
 		"""
