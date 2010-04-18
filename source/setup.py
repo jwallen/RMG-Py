@@ -68,6 +68,7 @@ def setupCythonModules(name, version, description, author, author_email,
 	# The Cython modules to setup
 	ext_modules = [
 		Extension('rmg.chem', ['rmg/chem.py']),
+		Extension('rmg.data', ['rmg/data.py']),
 		Extension('rmg.graph', ['rmg/graph.py']),
 		Extension('rmg.thermo.model', ['rmg/thermo/model.py'])
 	]

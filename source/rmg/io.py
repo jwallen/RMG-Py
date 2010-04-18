@@ -280,13 +280,13 @@ def readDatabaseList(xml0, rootElement):
 	for element in databaseElements:
 
 		# Get database type
-		databaseType = xml0.getAttribute(element, 'type', required=True)
+		databaseType = str(xml0.getAttribute(element, 'type', required=True))
 		databaseType = databaseType.lower()
 		if databaseType not in ['general', 'seedmechanism']:
 			raise InvalidInputFileException('Invalid database type "' + databaseType + '"; valid types are "general".')
 
 		# Get database name and form path
-		databaseName = xml0.getElementText(element).strip()
+		databaseName = str(xml0.getElementText(element).strip())
 		databasePath = os.path.dirname(__file__)
 		databasePath = os.path.join(databasePath, '..')
 		databasePath = os.path.join(databasePath, '..')

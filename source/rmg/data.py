@@ -555,9 +555,7 @@ class Library(dict):
 					
 		except InvalidDatabaseException, e:
 			logging.exception(str(e))
-			for s in (dictstr, treestr, libstr):
-				logging.exception(s)
-			quit()
+			raise
 		
 	def removeLinks(self):
 		"""
@@ -653,12 +651,12 @@ def makeLogicNode(string):
 	raise Exception("Could not create Logic Node from %s"%string)
 		
 
-class LogicNode():
+class LogicNode:
 	"""
 	A base class for AND and OR logic nodes. 
 	"""
-	symbol="<TBD>" # To be redefined by subclass
 	def __init__(self,items,invert):
+		self.symbol="<TBD>" # To be redefined by subclass
 		self.components = []
 		for item in items:
 			if re.match('(?i)\s*OR|AND|NOT|UNION',item):
@@ -681,7 +679,11 @@ class LogicOr(LogicNode):
 	
 	Initialize with a list of component items and a boolean instruction to invert the answer.
 	"""
-	symbol = "OR"
+
+	def __init__(self,items,invert):
+		LogicNode.__init__(self,items,invert)
+		self.symbol = "OR"
+
 	def matchToStructure(self,database,structure,atoms):
 		"""
 		Does this node in the given database match the given structure with the labeled atoms?
@@ -713,7 +715,11 @@ class LogicOr(LogicNode):
 	
 class LogicAnd(LogicNode):
 	"""A logical AND node. Structure must match all components."""
-	symbol = "AND"
+
+	def __init__(self,items,invert):
+		LogicNode.__init__(self,items,invert)
+		self.symbol = "AND"
+
 	def matchToStructure(self,database,structure,atoms):
 		"""
 		Does this node in the given database match the given structure with the labeled atoms?
@@ -785,11 +791,13 @@ class Database:
 					if self.dictionary[child].__class__ != structure.Structure: canSort = False
 			if canSort:
 				for node, children in self.tree.children.iteritems():
-					children.sort(lambda x, y: cmp(len(self.dictionary[x].atoms()), len(self.dictionary[y].atoms())))
+					children.sort(self.__compareNodes)
 		if libstr != '':
 			lines = self.library.load(libstr)
 			self.library.parse(lines, 1)
 
+	def __compareNodes(self, x, y):
+		return cmp(len(self.dictionary[x].atoms()), len(self.dictionary[y].atoms()))
 
 	def save(self, dictstr, treestr, libstr):
 		"""
