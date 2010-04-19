@@ -521,7 +521,7 @@ class CoreEdgeReactionModel:
 				# For now we assume that this is equal to the enthalpy of formation
 				# of the species
 				for spec in speciesList:
-					spec.E0 = spec.getEnthalpy(T=298)
+					spec.E0 = spec.getEnthalpy(298)
 
 				# Determine isomer ground-state energies
 				for isomer in network.isomers:
@@ -529,7 +529,7 @@ class CoreEdgeReactionModel:
 				# Determine transition state ground-state energies of the reactions
 				for rxn in network.pathReactions:
 					E0 = sum([spec.E0 for spec in rxn.reactants])
-					rxn.E0 = E0 + rxn.kinetics[0].getActivationEnergy(rxn.getEnthalpyOfReaction(T=298))
+					rxn.E0 = E0 + rxn.kinetics[0].getActivationEnergy(rxn.getEnthalpyOfReaction(298))
 
 				# Shift network such that lowest-energy isomer has a ground state of 0.0
 				network.shiftToZeroEnergy()
@@ -582,13 +582,10 @@ class CoreEdgeReactionModel:
 							if netReaction in self.core.reactions:
 								netReaction.toCantera()
 
-				for spec in speciesList:
-					del spec.E0
 				for rxn in network.pathReactions:
 					del rxn.reactant
 					del rxn.product
-					del rxn.E0
-
+				
 				network.valid = True
 
 	def loadSeedMechanism(self, path):

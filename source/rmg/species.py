@@ -198,7 +198,7 @@ class Species:
 		self.thermoSnapshot = ThermoSnapshot()
 		self.lennardJones = None
 		self.spectralData = None
-		self.E0 = None
+		self.E0 = 0.0
 		
 		if SMILES is not None:
 			self.fromSMILES(SMILES)
@@ -257,8 +257,8 @@ class Species:
 		self.label = str(document.getAttribute(rootElement, 'label', required=False, default=self.id))
 
 		# Read reactive attribute
-		self.reactive = str(document.getAttribute(rootElement, 'reactive', required=False, default='yes')).lower()
-		self.reactive = not (self.reactive == 'no' or self.reactive == 'false' or self.reactive == 'n')
+		reactive = str(document.getAttribute(rootElement, 'reactive', required=False, default='yes')).lower()
+		self.reactive = not (reactive == 'no' or reactive == 'false' or reactive == 'n')
 
 		# Read <structure> element
 		self.structure = []
@@ -276,7 +276,7 @@ class Species:
 				self.thermoData = thermo.model.ThermoGAModel()
 				self.thermoData.fromXML(document, thermoElement)
 			else:
-				raise io.InvalidInputFileException('Invalid format "%s" for thermoData element; allowed values are "group additivity".' % format)
+				raise Exception('Invalid format "%s" for thermoData element; allowed values are "group additivity".' % format)
 
 		# Read <groundStateEnergy> element
 		groundStateEnergyElement = document.getChildElement(rootElement, 'groundStateEnergy', required=False)
@@ -284,7 +284,7 @@ class Species:
 			E0 = document.getChildQuantity(rootElement, 'groundStateEnergy', required=False, default=pq.Quantity(0.0))
 			self.E0 = float(E0.simplified)
 		else:
-			self.E0 = None
+			self.E0 = 0.0
 
 		# Read <spectralData> element
 		self.spectralData = None
@@ -304,6 +304,8 @@ class Species:
 		expDownElement = document.getChildElement(rootElement, 'expDownParam', required=False)
 		if expDownElement:
 			self.expDownParam = float(document.getQuantity(expDownElement).simplified)
+		else:
+			self.expDownParam = 0.0
 
 	def toXML(self, document, rootElement):
 		"""
@@ -543,7 +545,7 @@ class Species:
 		"""
 		Return the heat capacity of the species at temperature `T`.
 		"""
-		if self.thermoSnapshot.isValid(temperature=T):
+		if self.thermoSnapshot.isValid(T):
 			return self.thermoSnapshot.heatCapacity
 		#if self.thermoData is None: self.getThermoData()
 		return self.thermoData.getHeatCapacity(T)
@@ -552,7 +554,7 @@ class Species:
 		"""
 		Return the enthalpy of the species at temperature `T`.
 		"""
-		if self.thermoSnapshot.isValid(temperature=T):
+		if self.thermoSnapshot.isValid(T):
 			return self.thermoSnapshot.enthalpy
 		#if self.thermoData is None: self.getThermoData()
 		return self.thermoData.getEnthalpy(T)
@@ -561,7 +563,7 @@ class Species:
 		"""
 		Return the entropy of the species at temperature `T`.
 		"""
-		if self.thermoSnapshot.isValid(temperature=T):
+		if self.thermoSnapshot.isValid(T):
 			return self.thermoSnapshot.entropy
 		#if self.thermoData is None: self.getThermoData()
 		return self.thermoData.getEntropy(T)
@@ -570,7 +572,7 @@ class Species:
 		"""
 		Return the Gibbs free energy of the species at temperature `T`.
 		"""
-		if self.thermoSnapshot.isValid(temperature=T):
+		if self.thermoSnapshot.isValid(T):
 			return self.thermoSnapshot.freeEnergy
 		#if self.thermoData is None: self.getThermoData()
 		return self.thermoData.getFreeEnergy(T)
