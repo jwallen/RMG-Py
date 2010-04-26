@@ -44,6 +44,7 @@ Contains classes describing chemical reactions:
 import math
 import log as logging
 import os.path
+import cython
 
 import constants
 
@@ -101,13 +102,13 @@ class Reaction:
 		self.multiplier = 1.0
 		self.thirdBody = thirdBody
 
-		self.E0 = None
+		self.E0 = 0.0
 
 		# A cache for the best kinetics for this reaction
 		self.bestKinetics = None
 
-		# A dictionary of the labeled atoms for the reactants
-		self.atomLabels = {}
+		# A list of dictionaries of the labeled atoms for the reactants
+		self.atomLabels = []
 
 		# A pointer to the corresponding reaction in Cantera, if one exists
 		self.canteraReaction = None
@@ -485,7 +486,7 @@ class Reaction:
 			if product is spec: stoich += 1
 		return stoich
 
-	def getRate(self, T, P, conc, totalConc=None):
+	def getRate(self, T, P, conc, totalConc=0.0):
 		"""
 		Return the net rate of reaction at temperature `T` and pressure `P`. The
 		parameter `conc` is a map with species as keys and concentrations as
@@ -496,7 +497,7 @@ class Reaction:
 		"""
 
 		# Calculate total concentration
-		if totalConc is None:
+		if totalConc == 0.0:
 			totalConc=sum( conc.values() )
 
 		# Evaluate rate constant
@@ -593,7 +594,7 @@ class Reaction:
 
 		elif self.isAssociation():
 
-			if self.reactant.densStates is None:
+			if reacDensStates is None:
 				raise Exception('Unable to process association reaction; no density of states available for the reactant isomers.')
 
 			kf = kineticsInverseLaplaceTransform(kinetics, self.E0, reacDensStates, Elist, T)
@@ -623,22 +624,22 @@ class PDepReaction(Reaction):
 		self.kinetics = kinetics
 		self.network = network
 
-	def getRateConstant(self, T, P):
+	def getRateConstant(self, T, P=1.0e5):
 		"""
 		Return the value of the rate constant k(T) at the temperature `T` in K
 		and pressure `P` in Pa.
 		"""
-		return self.kinetics.getRateConstant(T, P)
+		return self.kinetics[0].getRateConstant(T, P)
 
-	def getBestKinetics(self, T, P):
+	def getBestKinetics(self, T, P=1.0e5):
 		"""
 		Return the best set of ArrheniusKinetics parameters for the forward
 		reaction evaluated at the temperature `T` and pressure `P`. Currently
 		this simply sets the prefactor to the value of :math:`k(T,P)` and
 		sets the other Arrhenius parameters to zero.
 		"""
-		if isinstance(self.kinetics, PDepArrheniusModel):
-			return self.kinetics.getArrhenius(P)
+		if isinstance(self.kinetics[0], PDepArrheniusModel):
+			return self.kinetics[0].getArrhenius(P)
 		else:
 			k = float(self.getRateConstant(T, P))
 			return ArrheniusModel(A=k, n=0.0, Ea=0.0)
@@ -746,6 +747,8 @@ def checkForExistingReaction(rxn):
 	reaction (if found).
 	"""
 	
+	cython.declare(r1=Species, r2=Species, my_reactionList=list, rxn0=Reaction)
+	
 	# Get the short-list of reactions with the same family, reactant1 and reactant2
 	r1 = rxn.reactants[0]
 	if len(rxn.reactants)==1: r2 = None
@@ -798,6 +801,8 @@ def makeNewReaction(forward, checkExisting=True):
 	made such that the forward reaction is exothermic at 298K.
 	"""
 	
+	cython.declare(reverse=Reaction, rxn=Reaction, found=cython.bint)
+
 	# switch it around if it's in the reverse direction
 	if forward.family.is_reverse:
 		reverse = forward
@@ -819,51 +824,12 @@ def makeNewReaction(forward, checkExisting=True):
 	# Note in the log
 	logging.verbose('Creating new %s reaction %s' % (forward.family, forward))
 	
-	def prepareStructures(forward, reverse, speciesList, atomLabels):
-	
-		speciesList = speciesList[:]
-
-		for spec in speciesList:
-			for struct in spec.structure:
-				struct.clearLabeledAtoms()
-
-		structures = []
-		for labels in atomLabels:
-			found = False
-			for spec in speciesList:
-				for struct in spec.structure:
-					atom = labels.values()[0]
-					if isinstance(atom, list):
-						for a in atom:
-							if not found and a in struct.atoms():
-								structures.append(struct)
-								found = True
-					else:
-						if not found and atom in struct.atoms():
-							structures.append(struct)
-							found = True
-				if found:
-					speciesList.remove(spec)
-					break
-		if len(speciesList) != 0:
-			raise UndeterminableKineticsException(forward)
-	
-		if len(structures) == 2 and structures[0] == structures[1]:
-			structures[1], map = structures[1].copy(returnMap=True)
-			for label, atom in atomLabels[1].iteritems():
-				atomLabels[1][label] = map[atom]
-
-		# Apply atom labels to structures
-		for labels in atomLabels:
-			for label, atom in labels.iteritems():
-				atom.label = label
-		
-		return structures
-	
 	# By convention, we only work with the reaction in the direction for which
 	# we have assigned kinetics from the kinetics database; the kinetics of the
 	# reverse of that reaction come from thermodynamics
 	
+	cython.declare(labels=dict, forwardAtomLabels=list, reactantStructures=list, forwardKinetics=list)
+
 	forwardAtomLabels = [labels.copy() for labels in forward.atomLabels]
 	reactantStructures = prepareStructures(forward, reverse, forward.reactants, forwardAtomLabels)
 	forwardKinetics = forward.family.getKinetics(forward, reactantStructures)
@@ -874,6 +840,47 @@ def makeNewReaction(forward, checkExisting=True):
 	forward.kinetics = forwardKinetics
 	
 	return processNewReaction(forward)
+
+def prepareStructures(forward, reverse, speciesList, atomLabels):
+
+	speciesList = speciesList[:]
+
+	for spec in speciesList:
+		for struct in spec.structure:
+			struct.clearLabeledAtoms()
+
+	structures = []
+	for labels in atomLabels:
+		found = False
+		for spec in speciesList:
+			for struct in spec.structure:
+				atom = labels.values()[0]
+				if isinstance(atom, list):
+					for a in atom:
+						if not found and a in struct.atoms():
+							structures.append(struct)
+							found = True
+				else:
+					if not found and atom in struct.atoms():
+						structures.append(struct)
+						found = True
+			if found:
+				speciesList.remove(spec)
+				break
+	if len(speciesList) != 0:
+		raise UndeterminableKineticsException(forward)
+
+	if len(structures) == 2 and structures[0] == structures[1]:
+		structures[1], map = structures[1].copy(returnMap=True)
+		for label, atom in atomLabels[1].iteritems():
+			atomLabels[1][label] = map[atom]
+
+	# Apply atom labels to structures
+	for labels in atomLabels:
+		for label, atom in labels.iteritems():
+			atom.label = label
+
+	return structures
 
 def processNewReaction(rxn):
 	"""

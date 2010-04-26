@@ -222,7 +222,7 @@ class Isomer:
 		# Determine the "barrier height" as the minimum transition state energy connected to that well
 		E0 = 1.0e100
 		for reaction in reactions:
-			if reaction.reactant == self or reaction.product == self:
+			if reaction.reactants == self.species or reaction.products == self.species:
 				if reaction.E0 < E0:
 					E0 = reaction.E0
 
@@ -239,7 +239,7 @@ class Isomer:
 		Eres = None
 
 		for reaction in reactions:
-			if reaction.reactant == self or reaction.product == self:
+			if reaction.reactants == self.species or reaction.products == self.species:
 				if Eres is None:
 					Eres = reaction.E0
 				elif reaction.E0 < Eres:
@@ -312,6 +312,16 @@ class Network:
 				if reaction is object:
 					return index
 		raise KeyError('%s not found in network %s.' % (object, self))
+
+	def getIsomer(self, species):
+		"""
+		Return the :class:`Isomer` object associated with the givel list of 
+		`species`.
+		"""
+		for isomer in self.isomers:
+			if isomer.species == species:
+				return isomer
+		raise PDepException('Unable to determine Isomer object for species %s.' % species)
 
 	def containsSpecies(self, species):
 		"""
@@ -519,7 +529,7 @@ class Network:
 						done = True
 					else:
 						r -= 1
-				Emax = Elist[r] + max([rxn.getBestKinetics(Tmax).Ea for rxn in self.pathReactions]) - Emax0
+				Emax = Elist[r]
 			else:
 				mult += 50
 
@@ -565,8 +575,10 @@ class Network:
 				# It might seem odd that this is dependent on temperature, and it
 				# isn't -- unless the Arrhenius expression has a negative n
 				for reaction in self.pathReactions:
+					reactant = self.getIsomer(reaction.reactants)
+					product = self.getIsomer(reaction.products)
 					reaction.kf, reaction.kb = reaction.calculateMicrocanonicalRate(Elist,
-						T, reaction.reactant.densStates, reaction.product.densStates)
+						T, reactant.densStates, product.densStates)
 					
 #				# DEBUG: Plot microcanonical rates
 #				import pylab
@@ -651,8 +663,8 @@ class Network:
 		Gnj = numpy.zeros([nReac+nProd,nIsom,nGrains], numpy.float64)
 		Fim = numpy.zeros([nIsom,nReac,nGrains], numpy.float64)
 		for reaction in self.pathReactions:
-			i = self.indexOf(reaction.reactant)
-			j = self.indexOf(reaction.product)
+			i = self.indexOf(self.getIsomer(reaction.reactants))
+			j = self.indexOf(self.getIsomer(reaction.products))
 			if reaction.isIsomerization():
 				Kij[j,i,:] = reaction.kf
 				Kij[i,j,:] = reaction.kb

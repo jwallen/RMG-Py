@@ -463,6 +463,7 @@ class CoreEdgeReactionModel:
 				network.bathGas.expDownParam = 4.86 * 4184
 
 				# Generate isomers
+				network.isomers = []
 				for rxn in network.pathReactions:
 
 					# Create isomer for the reactant
@@ -473,8 +474,7 @@ class CoreEdgeReactionModel:
 					if isomer is None:
 						isomer = Isomer(rxn.reactants)
 						network.isomers.append(isomer)
-					rxn.reactant = isomer
-
+					
 					# Create isomer for the product
 					isomer = None
 					for isom in network.isomers:
@@ -483,8 +483,7 @@ class CoreEdgeReactionModel:
 					if isomer is None:
 						isomer = Isomer(rxn.products)
 						network.isomers.append(isomer)
-					rxn.product = isomer
-
+					
 				# Update list of explored isomers to include all species in core
 				for isom in network.isomers:
 					if isom.isUnimolecular():
@@ -492,22 +491,6 @@ class CoreEdgeReactionModel:
 						if spec not in network.explored:
 							if spec in self.core.species:
 								network.explored.append(spec)
-
-				# Remove any isomers that aren't found in any path reactions
-				# Ideally this block of code wouldn't be needed, but it's here
-				# just in case
-				isomerList = []
-				for isomer in network.isomers:
-					found = False
-					for rxn in network.pathReactions:
-						if rxn.reactant is isomer or rxn.product is isomer:
-							found = True
-							break
-					if not found:
-						isomerList.append(isomer)
-				if len(isomerList) > 0:
-					logging.debug('Removed %i isomer(s) from network %i.' % (len(isomerList), network.id))
-					for isomer in isomerList: network.isomers.remove(isomer)
 
 				# Sort isomers so that all unimolecular isomers come first
 				isomers = [isom for isom in network.isomers if isom.isUnimolecular()]
@@ -564,28 +547,24 @@ class CoreEdgeReactionModel:
 								modelType, degreeT, degreeP = model
 								chebyshev = ChebyshevModel()
 								chebyshev.fitToData(Tlist, Plist, K[:,:,i,j], degreeT, degreeP)
-								netReaction.kinetics = chebyshev
+								netReaction.kinetics = [chebyshev]
 							elif model.lower() == 'pdeparrhenius':
 								pDepArrhenius = PDepArrheniusModel()
 								pDepArrhenius.fitToData(Tlist, Plist, K[:,:,i,j])
-								netReaction.kinetics = pDepArrhenius
+								netReaction.kinetics = [pDepArrhenius]
 							else:
 								pass
 
 							# Set temperature and pressure ranges explicitly
-							netReaction.kinetics.Tmin = Tmin
-							netReaction.kinetics.Tmax = Tmax
-							netReaction.kinetics.Pmin = Pmin
-							netReaction.kinetics.Pmax = Pmax
+							netReaction.kinetics[0].Tmin = Tmin
+							netReaction.kinetics[0].Tmax = Tmax
+							netReaction.kinetics[0].Pmin = Pmin
+							netReaction.kinetics[0].Pmax = Pmax
 
 							# Update cantera if this is a core reaction
 							if netReaction in self.core.reactions:
 								netReaction.toCantera()
 
-				for rxn in network.pathReactions:
-					del rxn.reactant
-					del rxn.product
-				
 				network.valid = True
 
 	def loadSeedMechanism(self, path):
