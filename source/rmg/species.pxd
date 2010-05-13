@@ -126,7 +126,7 @@ cdef class Species:
 
 ################################################################################
 
-cpdef checkForExistingSpecies(Structure structure)
+cpdef checkForExistingSpecies(Structure struct)
 
 cpdef makeNewSpecies(Structure structure, str label=?, bint reactive=?, bint checkExisting=?)
 

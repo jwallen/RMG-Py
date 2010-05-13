@@ -135,6 +135,8 @@ class CoreEdgeReactionModel:
 
 		if isinstance(newObject, species.Species):
 
+			cython.declare(newSpecies=Species, coreSpecies=Species)
+			
 			newSpecies = newObject
 			# Find reactions involving the new species as unimolecular reactant
 			# or product (e.g. A <---> products)
@@ -153,6 +155,8 @@ class CoreEdgeReactionModel:
 
 		elif isinstance(newObject, unirxn.network.Network) and settings.unimolecularReactionNetworks:
 
+			cython.declare(network=object, maxSpecies=Species, maxSpeciesFlux=cython.double)
+
 			network = newObject
 			# Determine the species with the maximum leak flux
 			maxSpecies, maxSpeciesFlux = network.getMaximumLeakSpecies()
@@ -167,6 +171,8 @@ class CoreEdgeReactionModel:
 
 		else:
 			raise TypeError('Unable to use object %s to enlarge reaction model; expecting an object of class rmg.species.Species or rmg.unirxn.network.Network.' % newObject)
+
+		cython.declare(rxn=Reaction, spec=Species, allSpeciesInCore=cython.bint)
 
 		# Add new reactions generated in above
 		for rxn in rxnList:

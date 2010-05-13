@@ -37,6 +37,7 @@ import pybel
 import os
 import xml.sax.saxutils
 import quantities as pq
+import cython
 
 import settings
 import structure
@@ -427,12 +428,10 @@ class Species:
 		if len(self.structure) != 1:
 			return
 
-		structure = self.structure[0]
-
-		isomers = [structure]
+		isomers = [self.structure[0]]
 
 		# Radicals
-		if structure.getRadicalCount() > 0:
+		if self.structure[0].getRadicalCount() > 0:
 			# Iterate over resonance isomers
 			index = 0
 			while index < len(isomers):
@@ -478,9 +477,9 @@ class Species:
 		"""
 		
 		thermoData = []
-		for structure in self.structure:
-			structure.updateAtomTypes()
-			thermoData.append(thermo.data.generateThermoData(structure, thermoClass))
+		for struct in self.structure:
+			struct.updateAtomTypes()
+			thermoData.append(thermo.data.generateThermoData(struct, thermoClass))
 		
 		# If multiple resonance isomers are present, use the thermo data of
 		# the most stable isomer (i.e. one with lowest enthalpy of formation)
@@ -653,31 +652,34 @@ global speciesCounter
 #: Used to label species uniquely. Incremented each time a new species is made.
 speciesCounter = 0 
 
-def checkForExistingSpecies(structure):
+def checkForExistingSpecies(struct):
 	"""
 	Check to see if an existing species contains the same 
 	:class:`structure.Structure` as `structure`. Returns :data:`True` or
 	:data:`False`, the matched species (if found), structure (if found), and
 	mapping (if found).
 	"""
-	
+
+	cython.declare(i=cython.int, spec=Species, s=Structure)
+	cython.declare(found=cython.bint, map12=dict, map21=dict)
+
 	# First check cache and return if species is found
 	for i, spec in enumerate(speciesCache):
-		for struct in spec.structure:
-			found, map12, map21 = structure.findIsomorphism(struct)
+		for s in spec.structure:
+			found, map12, map21 = struct.findIsomorphism(s)
 			if found:
 				speciesCache.pop(i)
 				speciesCache.insert(0, spec)
-				return True, spec, struct, map21
+				return True, spec, s, map21
 
 	# Return an existing species if a match is found
 	for spec in speciesList:
-		for struct in spec.structure:
-			found, map12, map21 = structure.findIsomorphism(struct)
+		for s in spec.structure:
+			found, map12, map21 = struct.findIsomorphism(s)
 			if found:
 				speciesCache.pop(i)
 				speciesCache.insert(0, spec)
-				return True, spec, struct, map21
+				return True, spec, s, map21
 
 	# At this point we can conclude that the structure does not exist
 	return False, None, None, None
