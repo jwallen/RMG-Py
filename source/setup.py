@@ -74,7 +74,8 @@ def setupCythonModules(name, version, description, author, author_email,
 		Extension('rmg.structure', ['rmg/structure.py']),
 		Extension('rmg.species', ['rmg/species.py']),
 		Extension('rmg.kinetics.model', ['rmg/kinetics/model.py']),
-		Extension('rmg.thermo.model', ['rmg/thermo/model.py'])
+		Extension('rmg.thermo.model', ['rmg/thermo/model.py']),
+		Extension('rmg.model', ['rmg/model.py']),
 	]
 
 	setup(name=name,
