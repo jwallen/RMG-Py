@@ -9,3 +9,9 @@
 
 # SQLite database files
 *.db
+
+# jQuery file - You should download this yourself
+media/jQuery.js
+
+# jsMath files - You should download these yourself
+media/jsMath/*
