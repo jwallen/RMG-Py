@@ -1,5 +1,6 @@
 body {
     font-family: sans;
+    font-size: 10pt;
     margin: 0;
 }
 
@@ -56,7 +57,7 @@ h3 {
 
 #sidebar {
     float: left;
-    width: 200px;
+    width: 216px;
     padding: 8px;
 }
 
@@ -67,7 +68,7 @@ h3 {
 }
 
 #mainbar {
-    margin: 0px 0px 0px 216px;
+    margin: 0px 0px 0px 232px;
     padding: 0px;
 }
 
@@ -93,3 +94,22 @@ h3 {
 #footer {
     text-align: center;
 }
+
+
+/* Sidebar list */
+
+#sidebar ul {
+    list-style-type: none;
+    padding: 0px 0px 12px 0px;
+}
+
+#sidebar ul {
+    font-weight: bold;
+}
+
+
+#sidebar li ul {
+    font-weight: normal;
+    font-size: 90%;
+}
+

@@ -18,6 +18,9 @@ urlpatterns = patterns('website',
 
     # The RMG website homepage
     (r'^$', 'main.views.index'),
+
+    # The RMG database homepage
+    (r'^database/$', 'database.views.index'),
 )
 
 # When developing in Django we generally don't have a web server available to
