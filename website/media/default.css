@@ -1,5 +1,5 @@
 body {
-    font-family: sans;
+    font-family: sans-serif;
     font-size: 10pt;
     margin: 0;
 }
@@ -95,7 +95,6 @@ h3 {
     text-align: center;
 }
 
-
 /* Sidebar list */
 
 #sidebar ul {
@@ -113,3 +112,35 @@ h3 {
     font-size: 90%;
 }
 
+/* Forms */
+
+label {
+    float: left;
+    width: 150px;
+    text-align: right;
+    padding-right: 8px;
+}
+
+input, textarea {
+    border: 1px solid #993333;
+    margin: 1px;
+}
+
+select {
+    border: 1px solid #993333;
+    background-color: #FFFFFF;
+    margin: 1px;
+}
+
+.numberInput {
+    width: 100px;
+    margin: 1px -2px 1px 1px;
+}
+
+.lineInput, .textInput {
+    width: 500px;
+}
+
+.textInput {
+    height: 125px;
+}
