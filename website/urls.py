@@ -21,6 +21,12 @@ urlpatterns = patterns('website',
 
     # The RMG database homepage
     (r'^database/$', 'database.views.index'),
+    
+    # Adding entries to the various depositories
+    (r'^database/thermo/depository/addEntry.html$', 'database.views.addThermoEntry'),
+    (r'^database/kinetics/depository/addEntry.html$', 'database.views.addKineticsEntry'),
+    (r'^database/states/depository/addEntry.html$', 'database.views.addStatesEntry'),
+    
 )
 
 # When developing in Django we generally don't have a web server available to

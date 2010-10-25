@@ -1,0 +1,46 @@
+{% extends "base.html" %}
+
+{% block title %}Add Thermodynamics Entry{% endblock %}
+{% block page_title %}Add Thermodynamics Entry{% endblock %}
+
+{% block extrahead %}{% endblock %}
+
+{% block navbar_items %}
+<a href="{% url database.views.index %}">Database</a> &raquo;
+<a href="{% url database.views.index %}">Thermodynamics</a> &raquo;
+<a href="{% url database.views.index %}">Depository</a> &raquo;
+<a href="{% url database.views.addThermoEntry %}">Add Thermodynamics Entry</a>
+{% endblock %}
+
+{% block sidebar_items %}
+{% include "databaseSidebar.html" %}
+{% endblock %}
+
+{% block page_body %}
+<form action="." method="POST">
+<p>
+<div class="fieldWrapper">
+    {{ form.species.errors }}
+    <label>Species:</label>
+    {{ form.species }}
+</div>
+</p>
+<p>
+<div class="fieldWrapper">
+    {{ form.dataFormat.errors }}
+    <label>Data format:</label>
+    {{ form.dataFormat }}
+</div>
+<div class="fieldWrapper">
+    {{ form.Tmin.errors }} {{ form.Tmax.errors }}
+    <label>Temperature range:</label>
+    {{ form.Tmin }} {{ form.Tmin_units }} to {{ form.Tmax }} {{ form.Tmax_units }}
+</div>
+</p>
+<p>
+{% include "dataEntryForm.html" %}
+</p>
+<p><input type="submit" value="Submit" /></p>
+</form>
+
+{% endblock %}
