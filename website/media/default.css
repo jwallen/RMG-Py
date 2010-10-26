@@ -116,7 +116,7 @@ h3 {
 
 label {
     float: left;
-    width: 150px;
+    width: 180px;
     text-align: right;
     padding-right: 8px;
 }
@@ -124,6 +124,7 @@ label {
 input, textarea {
     border: 1px solid #993333;
     margin: 1px;
+    vertical-align: middle;
 }
 
 select {
@@ -143,4 +144,9 @@ select {
 
 .textInput {
     height: 125px;
+}
+
+#submit {
+    display: block;
+    margin: auto;   
 }
