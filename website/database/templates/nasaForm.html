@@ -1,0 +1,73 @@
+<div id="nasaForm">
+    <div class="math">
+    \frac{C_\mathrm{p}^\circ(T)}{R} = a_{-2} T^{-2} + a_{-1} T^{-1} + a_0 + a_1 T + a_2 T^2 + a_3 T^3 + a_4 T^4
+    </div>
+    <div class="math">
+    \frac{H^\circ(T)}{RT} = -a_{-2} T^{-2} + a_{-1} \frac{\ln T}{T} + a_0 + \frac{1}{2} a_1 T + \frac{1}{3} a_2 T^2 + \frac{1}{4} a_3 T^3 + \frac{1}{5} a_4 T^4 + \frac{a_5}{T}
+    </div>
+    <div class="math">
+    \frac{S^\circ(T)}{R} = -\frac{1}{2} a_{-2} T^{-2} - a_{-1} T^{-1} + a_0 \ln T + a_1 T + \frac{1}{2} a_2 T^2 + \frac{1}{3} a_3 T^3 + \frac{1}{4} a_4 T^4 + a_6
+    </div>
+    <div class="fieldWrapper">
+        {{ nasaForm.nasa_numPolys.errors }}
+        <label>No. of polynomials:</label>
+        {{ nasaForm.nasa_numPolys }}
+    </div>
+    <div class="fieldWrapper">
+        {{ nasaForm.nasa_am2_0.errors }} {{ nasaForm.nasa_am2_1.errors }} {{ nasaForm.nasa_am2_2.errors }}
+        <label><span class="math">a_{-2} = </span></label>
+        {{ nasaForm.nasa_am2_0 }} {{ nasaForm.nasa_am2_1 }} {{ nasaForm.nasa_am2_2 }} (optional)
+    </div>
+    <div class="fieldWrapper">
+        {{ nasaForm.nasa_am1_0.errors }} {{ nasaForm.nasa_am1_1.errors }} {{ nasaForm.nasa_am1_2.errors }}
+        <label><span class="math">a_{-1} = </span></label>
+        {{ nasaForm.nasa_am1_0 }} {{ nasaForm.nasa_am1_1 }} {{ nasaForm.nasa_am1_2 }} (optional)
+    </div>
+    <div class="fieldWrapper">
+        {{ nasaForm.nasa_a0_0.errors }} {{ nasaForm.nasa_a0_1.errors }} {{ nasaForm.nasa_a0_2.errors }}
+        <label><span class="math">a_0 = </span></label>
+        {{ nasaForm.nasa_a0_0 }} {{ nasaForm.nasa_a0_1 }} {{ nasaForm.nasa_a0_2 }}
+    </div>
+    <div class="fieldWrapper">
+        {{ nasaForm.nasa_a1_0.errors }} {{ nasaForm.nasa_a1_1.errors }} {{ nasaForm.nasa_a1_2.errors }}
+        <label><span class="math">a_1 = </span></label>
+        {{ nasaForm.nasa_a1_0 }} {{ nasaForm.nasa_a1_1 }} {{ nasaForm.nasa_a1_2 }}
+    </div>
+    <div class="fieldWrapper">
+        {{ nasaForm.nasa_a2_0.errors }} {{ nasaForm.nasa_a2_1.errors }} {{ nasaForm.nasa_a2_2.errors }}
+        <label><span class="math">a_2 = </span></label>
+        {{ nasaForm.nasa_a2_0 }} {{ nasaForm.nasa_a2_1 }} {{ nasaForm.nasa_a2_2 }}
+    </div>
+    <div class="fieldWrapper">
+        {{ nasaForm.nasa_a3_0.errors }} {{ nasaForm.nasa_a3_1.errors }} {{ nasaForm.nasa_a3_2.errors }}
+        <label><span class="math">a_3 = </span></label>
+        {{ nasaForm.nasa_a3_0 }} {{ nasaForm.nasa_a3_1 }} {{ nasaForm.nasa_a3_2 }}
+    </div>
+    <div class="fieldWrapper">
+        {{ nasaForm.nasa_a4_0.errors }} {{ nasaForm.nasa_a4_1.errors }} {{ nasaForm.nasa_a4_2.errors }}
+        <label><span class="math">a_4 = </span></label>
+        {{ nasaForm.nasa_a4_0 }} {{ nasaForm.nasa_a4_1 }} {{ nasaForm.nasa_a4_2 }}
+    </div>
+    <div class="fieldWrapper">
+        {{ nasaForm.nasa_a5_0.errors }} {{ nasaForm.nasa_a5_1.errors }} {{ nasaForm.nasa_a5_2.errors }}
+        <label><span class="math">a_5 = </span></label>
+        {{ nasaForm.nasa_a5_0 }} {{ nasaForm.nasa_a5_1 }} {{ nasaForm.nasa_a5_2 }}
+    </div>
+    <div class="fieldWrapper">
+        {{ nasaForm.nasa_a6_0.errors }} {{ nasaForm.nasa_a6_1.errors }} {{ nasaForm.nasa_a6_2.errors }}
+        <label><span class="math">a_6 = </span></label>
+        {{ nasaForm.nasa_a6_0 }} {{ nasaForm.nasa_a6_1 }} {{ nasaForm.nasa_a6_2 }}
+    </div>
+    <div class="fieldWrapper">
+        {{ nasaForm.nasa_Tmin_0.errors }} {{ nasaForm.nasa_Tmin_1.errors }} {{ nasaForm.nasa_Tmin_2.errors }}
+        <label>Tmin:</label>
+        {{ nasaForm.nasa_Tmin_0 }} {{ nasaForm.nasa_Tmin_1 }} {{ nasaForm.nasa_Tmin_2 }}  {{ nasaForm.nasa_Tmin_units }}
+    </div>
+    <div class="fieldWrapper">
+        {{ nasaForm.nasa_Tmax_0.errors }} {{ nasaForm.nasa_Tmax_1.errors }} {{ nasaForm.nasa_Tmax_2.errors }}
+        <label>Tmax:</label>
+        {{ nasaForm.nasa_Tmax_0 }} {{ nasaForm.nasa_Tmax_1 }} {{ nasaForm.nasa_Tmax_2 }}  {{ nasaForm.nasa_Tmax_units }}
+    </div>
+    
+    
+</div>

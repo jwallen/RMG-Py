@@ -1,0 +1,62 @@
+<div id="wilhoitForm">
+    <div class="math">
+    C_\mathrm{p}(T) = C_\mathrm{p}(0) + \left[ C_\mathrm{p}(\infty) -
+        C_\mathrm{p}(0) \right] y^2 \left[ 1 + (y - 1) \sum_{i=0}^3 a_i y^i \right]
+    </div>
+    <div class="math">
+    H^\circ(T) = H_0 + \int_0^\infty C_\mathrm{p}(T) \ dT \ \ \ \ \ \ \ \ S^\circ(T) = S_0 + \int_0^\infty \frac{C_\mathrm{p}(T)}{T} \ dT
+    </div>
+    <div class="math">
+    y \equiv \frac{T}{T + B}
+    </div>
+    <div class="fieldWrapper">
+        {{ wilhoitForm.Cp0.errors }}
+        <label><span class="math">C_\mathrm{p}(0) = </span></label>
+        {{ wilhoitForm.Cp0 }} {{ wilhoitForm.Cp0_units }}
+    </div>
+    <div class="fieldWrapper">
+        {{ wilhoitForm.CpInf.errors }}
+        <label><span class="math">C_\mathrm{p}(\infty) = </span></label>
+        {{ wilhoitForm.CpInf }} {{ wilhoitForm.CpInf_units }}
+    </div>
+    <div class="fieldWrapper">
+        {{ wilhoitForm.a0.errors }}
+        <label><span class="math">a_0 = </span></label>
+        {{ wilhoitForm.a0 }}
+    </div>
+    <div class="fieldWrapper">
+        {{ wilhoitForm.a1.errors }}
+        <label><span class="math">a_1 = </span></label>
+        {{ wilhoitForm.a1 }}
+    </div>
+    <div class="fieldWrapper">
+        {{ wilhoitForm.a2.errors }}
+        <label><span class="math">a_2 = </span></label>
+        {{ wilhoitForm.a2 }}
+    </div>
+    <div class="fieldWrapper">
+        {{ wilhoitForm.a3.errors }}
+        <label><span class="math">a_3 = </span></label>
+        {{ wilhoitForm.a3 }}
+    </div>
+    <div class="fieldWrapper">
+        {{ wilhoitForm.B.errors }}
+        <label><span class="math">B = </span></label>
+        {{ wilhoitForm.B }} {{ wilhoitForm.B_units }}
+    </div>
+    <div class="fieldWrapper">
+        {{ wilhoitForm.H0.errors }}
+        <label><span class="math">H_0 = </span></label>
+        {{ wilhoitForm.H0 }} {{ wilhoitForm.H0_units }}
+    </div>
+    <div class="fieldWrapper">
+        {{ wilhoitForm.S0.errors }}
+        <label><span class="math">S_0 = </span></label>
+        {{ wilhoitForm.S0 }} {{ wilhoitForm.S0_units }}
+    </div>
+    <div class="fieldWrapper">
+    {{ form.Tmin.errors }} {{ form.Tmax.errors }}
+    <label>Temperature range:</label>
+    {{ form.Tmin }} {{ form.Tmin_units }} to {{ form.Tmax }} {{ form.Tmax_units }}
+    </div>
+</div>

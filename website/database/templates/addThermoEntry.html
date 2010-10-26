@@ -3,7 +3,59 @@
 {% block title %}Add Thermodynamics Entry{% endblock %}
 {% block page_title %}Add Thermodynamics Entry{% endblock %}
 
-{% block extrahead %}{% endblock %}
+{% block extrahead %}
+<script type="text/javascript" src="/media/jQuery.js"></script>
+<script type="text/javascript" src="/media/jsMath/easy/load.js"></script>
+
+<script type="text/javascript">
+function updateThermoType() {
+    var text = $("#id_dataFormat :selected").text().toLowerCase();
+    if (text == "group additivity") {
+        $("#thermoDataForm").show(0);
+        $("#wilhoitForm").hide(0);
+        $("#nasaForm").hide(0);
+    }
+    else if (text == "wilhoit polynomial") {
+        $("#thermoDataForm").hide(0);
+        $("#nasaForm").hide(0);
+        $("#wilhoitForm").show(0);
+    }
+    else if (text == "nasa polynomial") {
+        $("#thermoDataForm").hide(0);
+        $("#wilhoitForm").hide(0);
+        $("#nasaForm").show(0);
+    }
+    else {
+        $("#thermoDataForm").hide(0);
+        $("#wilhoitForm").hide(0);
+        $("#nasaForm").hide(0);
+    }
+}
+
+function updateNASAForm() {
+    var text = parseInt($("#id_nasa_numPolys :selected").text().toLowerCase());
+    if (text > 1) {
+        $("#id_nasa_am2_1,#id_nasa_am1_1,#id_nasa_a0_1,#id_nasa_a1_1,#id_nasa_a2_1,#id_nasa_a3_1,#id_nasa_a4_1,#id_nasa_a5_1,#id_nasa_a6_1,#id_nasa_Tmin_1,#id_nasa_Tmax_1").show(0);
+    }
+    else {
+        $("#id_nasa_am2_1,#id_nasa_am1_1,#id_nasa_a0_1,#id_nasa_a1_1,#id_nasa_a2_1,#id_nasa_a3_1,#id_nasa_a4_1,#id_nasa_a5_1,#id_nasa_a6_1,#id_nasa_Tmin_1,#id_nasa_Tmax_1").hide(0);
+    }
+    if (text > 2) {
+        $("#id_nasa_am2_2,#id_nasa_am1_2,#id_nasa_a0_2,#id_nasa_a1_2,#id_nasa_a2_2,#id_nasa_a3_2,#id_nasa_a4_2,#id_nasa_a5_2,#id_nasa_a6_2,#id_nasa_Tmin_2,#id_nasa_Tmax_2").show(0);
+    }
+    else {
+        $("#id_nasa_am2_2,#id_nasa_am1_2,#id_nasa_a0_2,#id_nasa_a1_2,#id_nasa_a2_2,#id_nasa_a3_2,#id_nasa_a4_2,#id_nasa_a5_2,#id_nasa_a6_2,#id_nasa_Tmin_2,#id_nasa_Tmax_2").hide(0);
+    }
+}
+
+$(document).ready(function() {
+    $("#id_dataFormat").change(updateThermoType);
+    updateThermoType();
+    $("#id_nasa_numPolys").change(updateNASAForm);
+    updateNASAForm();
+});
+</script>
+{% endblock %}
 
 {% block navbar_items %}
 <a href="{% url database.views.index %}">Database</a> &raquo;
@@ -31,16 +83,14 @@
     <label>Data format:</label>
     {{ form.dataFormat }}
 </div>
-<div class="fieldWrapper">
-    {{ form.Tmin.errors }} {{ form.Tmax.errors }}
-    <label>Temperature range:</label>
-    {{ form.Tmin }} {{ form.Tmin_units }} to {{ form.Tmax }} {{ form.Tmax_units }}
-</div>
+{% include "thermoDataForm.html" %}
+{% include "wilhoitForm.html" %}
+{% include "nasaForm.html" %}
 </p>
 <p>
 {% include "dataEntryForm.html" %}
 </p>
-<p><input type="submit" value="Submit" /></p>
+<p><input type="submit" value="Submit" id="submit" /></p>
 </form>
 
 {% endblock %}

@@ -1,5 +1,5 @@
 from django.shortcuts import render_to_response
-from forms import ThermoEntryForm
+from forms import *
 
 def index(request):
     """
@@ -12,7 +12,11 @@ def addThermoEntry(request):
     The homepage for RMG database viewing and editing.
     """
     form = ThermoEntryForm()
-    return render_to_response('addThermoEntry.html', {'form': form})
+    thermoDataForm = ThermoDataForm()
+    wilhoitForm = WilhoitForm()
+    nasaForm = NASAForm()
+    return render_to_response('addThermoEntry.html', 
+        {'form': form, 'thermoDataForm': thermoDataForm, 'wilhoitForm': wilhoitForm, 'nasaForm': nasaForm})
 
 def addKineticsEntry(request):
     """
