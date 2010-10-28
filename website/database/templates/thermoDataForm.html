@@ -5,18 +5,13 @@
         {{ thermoDataForm.Cplist }} {{ thermoDataForm.Cp_units }} at {{ thermoDataForm.Tlist }}  {{ thermoDataForm.T_units }}
     </div>
     <div class="fieldWrapper">
-        {{ thermoDataForm.H0.errors }}
+        {{ thermoDataForm.H298.errors }}
         <label>Enthalpy (298 K) = </label>
         {{ thermoDataForm.H298 }} {{ thermoDataForm.H298_units }}
     </div>
     <div class="fieldWrapper">
-        {{ wilhoitForm.S0.errors }}
+        {{ thermoDataForm.S298.errors }}
         <label>Entropy (298 K) = </label>
         {{ thermoDataForm.S298 }} {{ thermoDataForm.S298_units }}
-    </div>
-    <div class="fieldWrapper">
-    {{ form.Tmin.errors }} {{ form.Tmax.errors }}
-    <label>Temperature range:</label>
-    {{ form.Tmin }} {{ form.Tmin_units }} to {{ form.Tmax }} {{ form.Tmax_units }}
     </div>
 </div>

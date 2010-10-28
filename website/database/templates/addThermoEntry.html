@@ -69,7 +69,7 @@ $(document).ready(function() {
 {% endblock %}
 
 {% block page_body %}
-<form action="." method="POST">
+<form action="" method="POST">{% csrf_token %}
 <p>
 <div class="fieldWrapper">
     {{ form.species.errors }}
@@ -86,6 +86,11 @@ $(document).ready(function() {
 {% include "thermoDataForm.html" %}
 {% include "wilhoitForm.html" %}
 {% include "nasaForm.html" %}
+<div class="fieldWrapper">
+    {{ form.Tmin.errors }} {{ form.Tmax.errors }}
+    <label>Temperature range:</label>
+    {{ form.Tmin }} {{ form.Tmin_units }} to {{ form.Tmax }} {{ form.Tmax_units }}
+</div>
 </p>
 <p>
 {% include "dataEntryForm.html" %}

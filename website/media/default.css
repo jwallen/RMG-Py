@@ -133,6 +133,10 @@ select {
     margin: 1px;
 }
 
+.error {
+    color: #FF0000;
+}
+
 .numberInput {
     width: 100px;
     margin: 1px -2px 1px 1px;
