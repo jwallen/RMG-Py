@@ -576,20 +576,27 @@ class DataEntry:
     =================== =============== ========================================
     Attribute           Type            Description
     =================== =============== ========================================
-    `index`             ``int``         A unique integer index
-    `label`             ``str``         A unique, brief string label
-    `shortComment`      ``str``         A brief (one-line) comment
-    `longComment`       ``str``         A long, verbose comment
-    `history`           ``list``        Tuples containing the date of change, author, and a brief description of the change
+    `index`             ``int``         A unique integer index, generally assigned automatically
+    `reference`         ``str``         A bibliographic reference to the source of the data
+    `referenceLink`     ``str``         A valid, permanent hyperlink to the reference (e.g. DOI)
+    `referenceType`     ``str``         The type of reference: ``theoretical``, ``experimental``, or ``review``
+    `shortDesc`         ``str``         A brief (one-line) description of the data
+    `longDesc`          ``str``         A long, verbose description of the data
+    `comments`          ``list``        Tuples containing the date/time of change, author, and the comment itself
+    `history`           ``list``        Tuples containing the date/time of change, author, and a brief description of the change
     =================== =============== ========================================
     
     """
 
-    def __init__(self, index=0, label='', shortComment='', longComment='', history=None):
+    def __init__(self, index=-1, reference='', referenceLink='', referenceType='', 
+      shortDesc='', longDesc='', comments=None, history=None):
         self.index = index
-        self.label = label
-        self.shortComment = shortComment
-        self.longComment = longComment
+        self.reference = reference
+        self.referenceLink = referenceLink
+        self.referenceType = referenceType
+        self.shortDesc = shortDesc
+        self.longDesc = longDesc
+        self.comments = comments or []
         self.history = history or []
 
 ################################################################################

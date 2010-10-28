@@ -43,15 +43,12 @@ from chempy.molecule import Atom, Bond, Molecule
 
 class ThermoEntry(DataEntry):
     """
-    A single entry in the thermodynamics database. Each entry either contains
-    a thermodynamics `model` or a string label of a `node` to look at for
-    thermodynamics information.
+    A single entry in the thermodynamics database.
     """
 
-    def __init__(self, model=None, node='', index=0, label='', shortComment='', longComment='', history=None):
-        DataEntry.__init__(self, index, label, shortComment, longComment, history)
-        self.model = model
-        self.node = node
+    def __init__(self, data=None, index=0, reference='', referenceLink='', referenceType='', shortDesc='', longDesc='', comments=None, history=None):
+        DataEntry.__init__(self, index, reference, referenceLink, referenceType, shortDesc, longDesc, comments, history)
+        self.data = data
 
 ################################################################################
 
