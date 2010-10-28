@@ -6,7 +6,7 @@ import os
 from django.contrib import admin
 admin.autodiscover()
 
-urlpatterns = patterns('website',
+urlpatterns = patterns('',
     # Example:
     # (r'^website/', include('website.foo.urls')),
 
@@ -16,16 +16,20 @@ urlpatterns = patterns('website',
     # Uncomment the next line to enable the admin:
     (r'^admin/', include(admin.site.urls)),
 
+    # Account management
+    (r'^accounts/login/$', 'django.contrib.auth.views.login', {'template_name': 'login.html'}),
+    (r'^accounts/logout/$', 'django.contrib.auth.views.logout', {'template_name': 'logout.html'}),
+
     # The RMG website homepage
-    (r'^$', 'main.views.index'),
+    (r'^$', 'website.main.views.index'),
 
     # The RMG database homepage
-    (r'^database/$', 'database.views.index'),
+    (r'^database/$', 'website.database.views.index'),
     
     # Adding entries to the various depositories
-    (r'^database/thermo/depository/addEntry.html$', 'database.views.addThermoEntry'),
-    (r'^database/kinetics/depository/addEntry.html$', 'database.views.addKineticsEntry'),
-    (r'^database/states/depository/addEntry.html$', 'database.views.addStatesEntry'),
+    (r'^database/thermo/depository/addEntry.html$', 'website.database.views.addThermoEntry'),
+    (r'^database/kinetics/depository/addEntry.html$', 'website.database.views.addKineticsEntry'),
+    (r'^database/states/depository/addEntry.html$', 'website.database.views.addStatesEntry'),
     
 )
 

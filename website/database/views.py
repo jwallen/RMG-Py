@@ -1,6 +1,8 @@
 from django.http import HttpResponseRedirect
 from django.shortcuts import render_to_response
 from django.template import RequestContext
+from django.contrib.auth.decorators import login_required
+
 from forms import *
 
 from chempy.thermo import ThermoGAModel, WilhoitModel, NASAPolynomial, NASAModel
@@ -10,8 +12,9 @@ def index(request):
     """
     The homepage for RMG database viewing and editing.
     """
-    return render_to_response('database.html', {})
+    return render_to_response('database.html', {}, context_instance=RequestContext(request))
 
+#@login_required
 def addThermoEntry(request):
     """
     The homepage for RMG database viewing and editing.
@@ -109,10 +112,10 @@ def addKineticsEntry(request):
     """
     The homepage for RMG database viewing and editing.
     """
-    return render_to_response('addKinetics.html', {})
+    return render_to_response('addKinetics.html', {}, context_instance=RequestContext(request))
 
 def addStatesEntry(request):
     """
     The homepage for RMG database viewing and editing.
     """
-    return render_to_response('addStates.html', {})
+    return render_to_response('addStates.html', {}, context_instance=RequestContext(request))
