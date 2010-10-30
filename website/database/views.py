@@ -1,12 +1,22 @@
+import os.path
+import datetime
+
 from django.http import HttpResponseRedirect
 from django.shortcuts import render_to_response
 from django.template import RequestContext
 from django.contrib.auth.decorators import login_required
 
+import settings
 from forms import *
 
 from chempy.thermo import ThermoGAModel, WilhoitModel, NASAPolynomial, NASAModel
-from rmgdata.thermo import ThermoEntry
+from rmgdata.thermo import ThermoEntry, ThermoDatabase
+
+################################################################################
+
+thermoDatabase = ThermoDatabase(path=os.path.join(settings.DATABASE_PATH, 'thermo'))
+
+################################################################################
 
 def index(request):
     """
@@ -87,14 +97,19 @@ def addThermoEntry(request):
         
             if thermoData is not None:
                 thermoEntry = ThermoEntry(
+                    molecule=form.cleaned_data['species'],
                     data=thermoData, 
                     reference=reference, 
                     referenceLink=referenceLink, 
                     referenceType=referenceType, 
                     shortDesc=shortDesc, 
                     longDesc=longDesc,
+                    history=[(datetime.datetime.today(),'user','Added to database.')],
                 )
                 print repr(thermoData)
+                
+                thermoDatabase.depository.add(thermoEntry)
+                thermoDatabase.depository.save(thermoEntry)
                 
                 print 'Form is valid!!!!'
         #       return HttpResponseRedirect('/database/')

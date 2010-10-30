@@ -286,15 +286,15 @@ class NASAForm(forms.Form):
         numPolys = self.cleaned_data['nasa_numPolys']
         if numPolys > 2:
             for field in ['nasa_a0_2', 'nasa_a1_2', 'nasa_a2_2', 'nasa_a3_2', 'nasa_a4_2', 'nasa_a5_2', 'nasa_a6_2', 'nasa_Tmin_2', 'nasa_Tmax_2']:
-                if self.cleaned_data[field] is None:
+                if field not in self.cleaned_data or self.cleaned_data[field] is None:
                     self._errors[field] = self.error_class([u'This field is required.'])
         if numPolys > 1:
             for field in ['nasa_a0_1', 'nasa_a1_1', 'nasa_a2_1', 'nasa_a3_1', 'nasa_a4_1', 'nasa_a5_1', 'nasa_a6_1', 'nasa_Tmin_1', 'nasa_Tmax_1']:
-                if self.cleaned_data[field] is None:
+                if field not in self.cleaned_data or self.cleaned_data[field] is None:
                     self._errors[field] = self.error_class([u'This field is required.'])
         if numPolys > 0:
             for field in ['nasa_a0_0', 'nasa_a1_0', 'nasa_a2_0', 'nasa_a3_0', 'nasa_a4_0', 'nasa_a5_0', 'nasa_a6_0', 'nasa_Tmin_0', 'nasa_Tmax_0']:
-                if self.cleaned_data[field] is None:
+                if field not in self.cleaned_data or self.cleaned_data[field] is None:
                     self._errors[field] = self.error_class([u'This field is required.'])
         return self.cleaned_data
     

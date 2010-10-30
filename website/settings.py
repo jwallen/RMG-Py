@@ -7,6 +7,8 @@ Contains Django settings for the RMG web interface.
 # The full path of the Django project (as determined from the location of this file)
 PROJECT_PATH = os.path.realpath(os.path.dirname(__file__))
 
+DATABASE_PATH = os.path.join(PROJECT_PATH, 'data')
+
 DEBUG = True
 TEMPLATE_DEBUG = DEBUG
 
