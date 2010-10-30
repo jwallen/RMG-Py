@@ -180,6 +180,25 @@ td.commentText p, td.historyText p {
     color: #808080;
 }
 
-.parameterList {
+table.data {
+    width: 100%;
+}
+
+table.data td.heading {
     text-align: center;
+    font-weight: normal;
+    text-decoration: underline;
+    width: 100%;
+}
+
+table.data td.key {
+    text-align: right;
+    font-weight: bold;
+    vertical-align: top;
+    width: 50%;
+}
+
+table.data td.value {
+    text-align: left;
+    width: 50%;
 }
