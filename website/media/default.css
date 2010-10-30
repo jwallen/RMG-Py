@@ -179,4 +179,7 @@ td.commentText p, td.historyText p {
     font-size: 80%;
     color: #808080;
 }
+
+.parameterList {
+    text-align: center;
 }

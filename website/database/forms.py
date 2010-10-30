@@ -336,3 +336,24 @@ class NASAForm(forms.Form):
         
     def clean_nasa_Tmax_2(self):
         return convertTemperature(self.cleaned_data['nasa_Tmax_2'], self.data['nasa_Tmax_units'])
+
+################################################################################
+
+class ThermoEvalForm(forms.Form):
+    """
+    A form for evaluting thermodynamic quantities. Provides a field for
+    inputting the temperature and fields for outputting the various
+    thermodynamic quantities.
+    """
+    
+    T = forms.FloatField(widget=forms.widgets.Input(attrs={'class': 'numberInput'}))
+    T_units = forms.ChoiceField(choices=TEMPERATURE_UNITS)
+    Cp = forms.FloatField(widget=forms.widgets.Input(attrs={'class': 'numberInput', 'readonly': 'readonly'}))
+    Cp_units = forms.ChoiceField(choices=HEAT_CAPACITY_UNITS)
+    H = forms.FloatField(widget=forms.widgets.Input(attrs={'class': 'numberInput', 'readonly': 'readonly'}))
+    H_units = forms.ChoiceField(choices=ENERGY_UNITS)
+    S = forms.FloatField(widget=forms.widgets.Input(attrs={'class': 'numberInput', 'readonly': 'readonly'}))
+    S_units = forms.ChoiceField(choices=HEAT_CAPACITY_UNITS)
+    G = forms.FloatField(widget=forms.widgets.Input(attrs={'class': 'numberInput', 'readonly': 'readonly'}))
+    G_units = forms.ChoiceField(choices=ENERGY_UNITS)
+   

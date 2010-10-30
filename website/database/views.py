@@ -139,9 +139,10 @@ def viewThermoEntry(request, index):
             (datetime.datetime.today(),'user','jwallen commented on this entry.'),
         ],
     )
+    form = ThermoEvalForm()
     entry.data.Tmin = 300; entry.data.Tmax = 2000
     if isinstance(entry.data, WilhoitModel):
-        parameters = {'entry': entry, 'type': 'wilhoit',
+        parameters = {'form': form, 'entry': entry, 'type': 'wilhoit',
             'Cp0': entry.data.cp0,
             'CpInf': entry.data.cpInf,
             'a0': entry.data.a0,
