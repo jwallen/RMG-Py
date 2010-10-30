@@ -46,13 +46,142 @@ class ThermoEntry(DataEntry):
     A single entry in the thermodynamics database.
     """
 
-    def __init__(self, data=None, index=0, reference='', referenceLink='', referenceType='', shortDesc='', longDesc='', comments=None, history=None):
+    def __init__(self, molecule=None, data=None, index=0, reference='', referenceLink='', referenceType='', shortDesc='', longDesc='', comments=None, history=None):
         DataEntry.__init__(self, index, reference, referenceLink, referenceType, shortDesc, longDesc, comments, history)
+        self.molecule = molecule
         self.data = data
+
+    def save(self, f):
+        """
+        Save the thermo entry in the standard, Python-style format.
+        """
+        f.write('thermo(\n')
+        f.write('    index = %i,\n' % (self.index))
+        
+        f.write('    species = \n')
+        f.write('"""\n')
+        f.write('%s\n' % (self.molecule))
+        f.write('""",\n')
+        
+        f.write('    data = ')
+        if isinstance(self.data, ThermoGAModel):
+            f.write('ThermoGAModel(\n')
+            f.write('        Tdata = ([%s],"K"),\n' % (','.join(['%g' % T for T in self.data.Tdata])))
+            f.write('        Cpdata = ([%s],"J/(mol*K)"),\n' % (','.join(['%g' % Cp for Cp in self.data.Cpdata])))
+            f.write('        H298 = (%g,"kJ/mol"),\n' % (self.data.H298/1000.))
+            f.write('        S298 = (%g,"J/(mol*K)"),\n' % (self.data.S298))
+            f.write('    ),\n')
+        elif isinstance(self.data, WilhoitModel):
+            f.write('WilhoitModel(\n')
+            f.write('        Cp0 = (%g,"J/(mol*K)"),\n' % (self.data.cp0))
+            f.write('        CpInf = (%g,"J/(mol*K)"),\n' % (self.data.cpInf))
+            f.write('        a0 = %g,\n' % (self.data.a0))
+            f.write('        a1 = %g,\n' % (self.data.a1))
+            f.write('        a2 = %g,\n' % (self.data.a2))
+            f.write('        a3 = %g,\n' % (self.data.a3))
+            f.write('        B = (%g,"K"),\n' % (self.data.B))
+            f.write('        H0 = (%g,"kJ/mol"),\n' % (self.data.H0/1000.))
+            f.write('        S0 = (%g,"J/(mol*K)"),\n' % (self.data.S0))
+        elif isinstance(self.data, NASAModel):
+            f.write('NASAModel(\n')
+            f.write('        polynomials = [\n')
+            for poly in self.data.polynomials:
+                f.write('            NASAPolynomial(Tmin=(%g,"K"), Tmax=(%g,"K"), coeffs=[%g,%g,%g,%g,%g,%g,%g,%g,%g]),\n' % (poly.Tmin, poly.Tmax, poly.cm2, poly.cm1, poly.c0, poly.c1, poly.c2, poly.c3, poly.c4, poly.c5, poly.c6))
+            
+            f.write('        ],\n')
+        
+        f.write('        Tmin = (%g,"K"),\n' % (self.data.Tmin))
+        f.write('        Tmax = (%g,"K"),\n' % (self.data.Tmax))
+        f.write('    ),\n')
+        
+        f.write('    reference = """%s""",\n' % (self.reference))
+        f.write('    referenceLink = "%s",\n' % (self.referenceLink))
+        f.write('    referenceType = "%s",\n' % (self.shortDesc))
+        f.write('    shortDesc = "%s",\n' % (self.referenceLink))
+        f.write('    longDesc = \n')
+        f.write('"""\n')
+        f.write('%s\n' % (self.longDesc))
+        f.write('""",\n')
+        f.write('    comments = [\n')
+        for date, username, comment in self.comments:
+            f.write('        ("%s","%s","%s"),\n' % (date, username, comment))
+        f.write('    ],\n')
+        f.write('    history = [\n')
+        for date, username, history in self.history:
+            f.write('        ("%s","%s","%s"),\n' % (date, username, history))
+        f.write('    ],\n')
+        f.write(')\n')
+        f.write('\n')
+        
 
 ################################################################################
 
+class ThermoDepository:
+    """
+    The thermodynamics depository.
+    """
+
+    def __init__(self, path=''):
+        self.entries = []
+        self.path = ''
+        if path != '': self.load(path)
+        
+    def add(self, entry):
+        """
+        Add an entry to the thermo depository.
+        """
+        entry.index = len(self.entries) + 1
+        self.entries.append(entry)
+        print self.entries
+    
+    def load(self, path):
+        """
+        Load the thermo depository from disk.
+        """
+        self.path = path
+    
+    def save(self):
+        """
+        Save the thermo depository to disk.
+        """
+        if self.path == '': return
+        if entry is not None: entries = [entry]
+        else: entries = self.entries
+        path = os.path.join(self.path, 'depository.py')
+        
+        f = open(path, 'w')
+        for entry in entries:
+            entry.save(f)
+        f.close()
+        
+################################################################################
+
 class ThermoDatabase:
+    """
+    The thermodynamics database, consisting of a `depository` of data.
+    """
+
+    def __init__(self, path=''):
+        self.depository = ThermoDepository()
+        self.path = ''
+        if path != '': self.load(path)
+
+    def load(self, path):
+        """
+        Load the thermo database from disk.
+        """
+        self.path = path
+        self.depository.load(os.path.join(path, 'depository'))
+    
+    
+
+
+
+
+
+################################################################################
+
+class ThermoDatabaseBase:
     """
     A base class for thermodynamics databases.
     """
@@ -175,7 +304,7 @@ class ThermoDatabase:
 
 ################################################################################
 
-class ThermoGroupDatabase(ThermoDatabase):
+class ThermoGroupDatabase(ThermoDatabaseBase):
     """
     A set of thermodynamics group additivity databases, consisting of a primary
     database of functional groups and a number of secondary databases to provide
@@ -377,7 +506,7 @@ class ThermoGroupDatabase(ThermoDatabase):
 
 ################################################################################
 
-class ThermoPrimaryDatabase(ThermoDatabase):
+class ThermoPrimaryDatabase(ThermoDatabaseBase):
     """
     A primary thermodynamics databases, consisting of a dictionary of species
     and a library of corresponding thermodynamic data. (No tree is utilized in
