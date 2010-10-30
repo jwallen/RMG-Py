@@ -31,6 +31,9 @@ urlpatterns = patterns('',
     (r'^database/kinetics/depository/addEntry.html$', 'website.database.views.addKineticsEntry'),
     (r'^database/states/depository/addEntry.html$', 'website.database.views.addStatesEntry'),
     
+    # Viewing entries in various depositories
+    (r'^database/thermo/depository/(\d)/$', 'website.database.views.viewThermoEntry'),
+    
 )
 
 # When developing in Django we generally don't have a web server available to

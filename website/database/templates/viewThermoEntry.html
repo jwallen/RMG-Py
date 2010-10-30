@@ -1,0 +1,135 @@
+{% extends "base.html" %}
+{% load markup %}
+
+{% block title %}View Thermodynamics Entry{% endblock %}
+{% block page_title %}View Thermodynamics Entry{% endblock %}
+
+{% block extrahead %}
+<script type="text/javascript" src="/media/jQuery.js"></script>
+<script type="text/javascript" src="/media/jsMath/easy/load.js"></script>
+<script type="text/javascript" src="/media/chem.js"></script>
+<script type="text/javascript">
+function updateThermo() {
+    var T = parseFloat($("#id_T").val());
+    var Cp = 0;
+    var H = 0;
+    var S = 0;
+    var G = 0;
+    T = convertTemperatureFrom(T, $("#id_T_units").val());
+    if ('{{ type }}' == 'wilhoit') {
+        Cp = wilhoit_getHeatCapacity(T, {{Cp0}}, {{CpInf}}, {{a0}}, {{a1}}, {{a2}}, {{a3}}, {{B}}, {{H0}}*1000, {{S0}});
+        H  = wilhoit_getEnthalpy(T, {{Cp0}}, {{CpInf}}, {{a0}}, {{a1}}, {{a2}}, {{a3}}, {{B}}, {{H0}}*1000, {{S0}});
+        S  = wilhoit_getEntropy(T, {{Cp0}}, {{CpInf}}, {{a0}}, {{a1}}, {{a2}}, {{a3}}, {{B}}, {{H0}}*1000, {{S0}});
+    }
+    G = H - T * S;
+    // Convert units
+    Cp = convertHeatCapacityTo(Cp, $("#id_Cp_units").val());
+    H = convertEnergyTo(H, $("#id_H_units").val());
+    S = convertHeatCapacityTo(S, $("#id_S_units").val());
+    G = convertEnergyTo(G, $("#id_G_units").val());
+
+    $("#id_Cp").val(Cp.toPrecision(6));
+    $("#id_H").val(H.toPrecision(6));
+    $("#id_S").val(S.toPrecision(6));
+    $("#id_G").val(G.toPrecision(6));
+}
+
+$(document).ready(function() {
+    $("#id_T").keyup(updateThermo);
+    $("#id_T_units").change(updateThermo);
+    $("#id_Cp_units").change(updateThermo);
+    $("#id_H_units").change(updateThermo);
+    $("#id_S_units").change(updateThermo);
+    $("#id_G_units").change(updateThermo);
+    $("#id_T").val(500);
+    updateThermo();
+});
+</script>
+{% endblock %}
+
+{% block navbar_items %}
+<a href="{% url database.views.index %}">Database</a> &raquo;
+<a href="{% url database.views.index %}">Thermodynamics</a> &raquo;
+<a href="{% url database.views.index %}">Depository</a> &raquo;
+<a href="{% url database.views.viewThermoEntry entry.index %}">{{ entry.index }}</a>
+{% endblock %}
+
+{% block sidebar_items %}
+{% include "databaseSidebar.html" %}
+{% endblock %}
+
+{% block page_body %}
+<h3>Species</h3>
+<pre>
+{{ entry.molecule }}
+</pre>
+
+<h3>Data</h3>
+{% ifequal type 'wilhoit' %}
+<p>
+    <div class="math">
+    C_\mathrm{p}(T) = C_\mathrm{p}(0) + \left[ C_\mathrm{p}(\infty) -
+        C_\mathrm{p}(0) \right] y^2 \left[ 1 + (y - 1) \sum_{i=0}^3 a_i y^i \right]
+    </div>
+    <div class="math">
+    H^\circ(T) = H_0 + \int_0^\infty C_\mathrm{p}(T) \ dT \ \ \ \ \ \ \ \ S^\circ(T) = S_0 + \int_0^\infty \frac{C_\mathrm{p}(T)}{T} \ dT
+    </div>
+    <div class="math">
+    y \equiv \frac{T}{T + B}
+    </div>
+    <div class="math">
+        \begin{eqnarray*}
+        C_\mathrm{p}(0) &=& {{ Cp0 }} \ \mathrm{J/mol \cdot K} \\
+        C_\mathrm{p}(\infty) &=& {{ CpInf }} \ \mathrm{J/mol \cdot K} \\
+        a_0 &=& {{ a0 }} \\
+        a_1 &=& {{ a1 }} \\
+        a_2 &=& {{ a2 }} \\
+        a_3 &=& {{ a3 }} \\
+        B &=& {{ B }} \ \mathrm{K} \\
+        H_0 &=& {{ H0 }} \ \mathrm{kJ/mol} \\
+        S_0 &=& {{ S0 }} \ \mathrm{J/mol \cdot K} \\
+        \text{Temperature range} &=& {{ Tmin }} - {{ Tmax }} \ \mathrm{K} \\
+        \end{eqnarray*}
+    </div>
+</p>
+{% endifequal %}
+
+{% include "thermoEvalForm.html" %}
+
+<h3>Reference</h3>
+<p>{{ entry.reference|restructuredtext }}</p>
+<p>{{ entry.referenceLink|restructuredtext }}</p>
+<p>{{ entry.referenceType|restructuredtext }}</p>
+
+<h3>Description</h3>
+<p>{{ entry.shortDesc|restructuredtext }}</p>
+<p>{{ entry.longDesc|restructuredtext }}</p>
+
+<h3>Comments</h3>
+{% for date, username, comment in entry.comments %}
+<table class="comment">
+<tr>
+    <td rowspan="2" class="commentIcon"><img src="/media/anonymous.png"/ width="32"></td>
+    <td class="commentText">{{ comment|restructuredtext }}</td>
+</tr>
+<tr>
+    <td class="commentMeta">Comment by {{ username }} on {{ date }}</td>
+</tr>
+</table>
+{% endfor %}
+<p><a>Add a comment</a></p>
+
+<h3>History</h3>
+{% for date, username, action in entry.history %}
+<table class="history">
+<tr>
+    <td rowspan="2" class="historyIcon"><img src="/media/anonymous.png"/ width="32"></td>
+    <td class="historyText">{{ action|restructuredtext }}</td>
+</tr>
+<tr>
+    <td class="historyMeta">Action by {{ username }} on {{ date }} <a>View details</a></td>
+</tr>
+</table>
+{% endfor %}
+
+{% endblock %}

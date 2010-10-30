@@ -123,6 +123,39 @@ def addThermoEntry(request):
         {'form': form, 'thermoDataForm': thermoDataForm, 'wilhoitForm': wilhoitForm, 'nasaForm': nasaForm},
         context_instance=RequestContext(request))
 
+def viewThermoEntry(request, index):
+    entry = ThermoEntry(
+        index=1,
+        molecule="""methane\n1 C 0""",
+        data=WilhoitModel(1, 2, 3, 4, 5, 6, 7000, 8, 9, 1000), 
+        reference="""n/a""", 
+        referenceLink='n/a', 
+        referenceType='n/a', 
+        shortDesc='n/a', 
+        longDesc="""n/a""",
+        comments=[(datetime.datetime.today(),'jwallen','This entry is only a test. The data it contains is made up. **Do not use** this data for anything except making sure your thermo data viewer is pretty. This data will self-destruct in ten seconds.')],
+        history=[
+            (datetime.datetime.today(),'user','jwallen added this entry to the thermodynamics depository.'),
+            (datetime.datetime.today(),'user','jwallen commented on this entry.'),
+        ],
+    )
+    entry.data.Tmin = 300; entry.data.Tmax = 2000
+    if isinstance(entry.data, WilhoitModel):
+        parameters = {'entry': entry, 'type': 'wilhoit',
+            'Cp0': entry.data.cp0,
+            'CpInf': entry.data.cpInf,
+            'a0': entry.data.a0,
+            'a1': entry.data.a1,
+            'a2': entry.data.a2,
+            'a3': entry.data.a3,
+            'B': entry.data.B,
+            'H0': entry.data.H0 / 1000.,
+            'S0': entry.data.S0,
+            'Tmin': entry.data.Tmin,
+            'Tmax': entry.data.Tmax,
+        }
+    return render_to_response('viewThermoEntry.html', parameters, context_instance=RequestContext(request))
+
 def addKineticsEntry(request):
     """
     The homepage for RMG database viewing and editing.

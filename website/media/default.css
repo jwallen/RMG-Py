@@ -154,3 +154,29 @@ select {
     display: block;
     margin: auto;   
 }
+
+.comment, .history {
+    width: 100%;
+    background-color: #EEEEEE;
+    padding: 2px;
+    margin: 2px 0px 2px 0px;
+}
+
+td.commentText p, td.historyText p {
+    margin: 0px;
+}
+
+.commentIcon, .historyIcon {
+    padding: 6px;
+    vertical-align: top;
+}
+
+.commentText, .historyText {
+    width: 100%;
+}
+
+.commentMeta, .historyMeta {
+    font-size: 80%;
+    color: #808080;
+}
+}
