@@ -15,3 +15,6 @@ media/jQuery.js
 
 # jsMath files - You should download these yourself
 media/jsMath/*
+
+# jqPlot files - You should download these yourself
+media/jqPlot/*

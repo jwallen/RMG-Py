@@ -1,11 +1,13 @@
+<!--[if IE]><script language="javascript" type="text/javascript" src="/media/jqPlot/excanvas.js"></script><![endif]-->
+<script language="javascript" type="text/javascript" src="/media/jqPlot/jquery.jqplot.min.js"></script>
+<link rel="stylesheet" type="text/css" href="/media/jqPlot/jquery.jqplot.css" />
+
 <script type="text/javascript">
-function updateThermo() {
-    var T = parseFloat($("#id_T").val());
+function calculateThermo(T) {
     var Cp = 0;
     var H = 0;
     var S = 0;
     var G = 0;
-    T = convertTemperatureFrom(T, $("#id_T_units").val());
     {% ifequal format 'Group additivity' %}
     var Tdata = [{% for T, Cp in Cpdata %}{{T}}{% if not forloop.last %},{% endif %}{% endfor %}];
     var Cpdata = [{% for T, Cp in Cpdata %}{{Cp}}{% if not forloop.last %},{% endif %}{% endfor %}];
@@ -29,6 +31,15 @@ function updateThermo() {
         {% endfor %} 
     {% endifequal %}
     G = H - T * S;
+    return [Cp, H, S, G];
+}
+
+function updateThermo() {
+    var T = parseFloat($("#id_T").val());
+    T = convertTemperatureFrom(T, $("#id_T_units").val());
+    // Calculate Cp, H, S, and G
+    var thermo = calculateThermo(T);
+    var Cp = thermo[0]; var H = thermo[1]; var S = thermo[2]; var G = thermo[3];
     // Convert units
     Cp = convertHeatCapacityTo(Cp, $("#id_Cp_units").val());
     H = convertEnergyTo(H, $("#id_H_units").val());
@@ -41,6 +52,53 @@ function updateThermo() {
     $("#id_G").val(G.toPrecision(6));
 }
 
+function generateThermoPlots() {
+    
+    // Get temperatures to use for plot
+    var Tlist = new Array();
+    var T = {{Tmin}}; var index = 0;
+    while (T < {{Tmax}}) {
+        Tlist[index] = T;
+        index += 1;
+        T += 10;
+    }
+    Tlist[index] = {{Tmax}};
+        
+    // Get thermo values at each temperature
+    var Cplist = new Array(Tlist.length);
+    var Hlist = new Array(Tlist.length);
+    var Slist = new Array(Tlist.length);
+    var Glist = new Array(Tlist.length);
+    for (var i = 0; i < Tlist.length; i++) {
+        var data = calculateThermo(Tlist[i]);
+        Cplist[i] = new Array(2);
+        Cplist[i][0] = Tlist[i]; Cplist[i][1] = data[0];
+        Hlist[i] = new Array(2);
+        Hlist[i][0] = Tlist[i]; Hlist[i][1] = data[1] / 1000.;
+        Slist[i] = new Array(2);
+        Slist[i][0] = Tlist[i]; Slist[i][1] = data[2];
+        Glist[i] = new Array(2);
+        Glist[i][0] = Tlist[i]; Glist[i][1] = data[3]/ 1000.;
+    }
+    
+    $.jqplot('Cp_chartdiv', [Cplist], 
+    { axes:{xaxis:{label:"Temperature (K)", min:0, tickInterval: 500}, yaxis:{label:"Heat capacity (J/mol*K)", min:0, tickInterval: 2}},
+      seriesDefaults:{showMarker: false}
+    });
+    $.jqplot('H_chartdiv', [Hlist], 
+    { axes:{xaxis:{label:"Temperature (K)", min:0, tickInterval: 500}, yaxis:{label:"Enthalpy (kJ/mol)", min:0, tickInterval: 2}},
+      seriesDefaults:{showMarker: false}
+    });
+    $.jqplot('S_chartdiv', [Slist], 
+    { axes:{xaxis:{label:"Temperature (K)", min:0, tickInterval: 500}, yaxis:{label:"Entropy (J/mol*K)", tickInterval: 2}},
+      seriesDefaults:{showMarker: false}
+    });
+    $.jqplot('G_chartdiv', [Glist], 
+    { axes:{xaxis:{label:"Temperature (K)", min:0, tickInterval: 500}, yaxis:{label:"Free energy (kJ/mol)", tickInterval: 10}},
+      seriesDefaults:{showMarker: false}
+    });
+}
+
 $(document).ready(function() {
     $("#id_T").keyup(updateThermo);
     $("#id_T_units").change(updateThermo);
@@ -50,8 +108,19 @@ $(document).ready(function() {
     $("#id_G_units").change(updateThermo);
     $("#id_T").val(500);
     updateThermo();
+    
+    generateThermoPlots();
+
 });
 </script>
+
+<script type="text/javascript">
+</script>
+
+<div id="Cp_chartdiv" style="width:400px; height:200px; margin: auto;"></div>
+<div id="H_chartdiv" style="width:400px; height:200px; margin: auto;"></div>
+<div id="S_chartdiv" style="width:400px; height:200px; margin: auto;"></div>
+<div id="G_chartdiv" style="width:400px; height:200px; margin: auto;"></div>
 
 <table>
     <tr>
