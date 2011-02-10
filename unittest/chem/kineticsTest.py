@@ -14,6 +14,118 @@ class KineticsTest(unittest.TestCase):
     kinetics models.
     """
 
+    def testArrheniusChangeT0(self):
+        """
+        Test the ArrheniusModel.changeT0() method.
+        """
+        kinetics = ArrheniusModel(A=1.0e6, n=1.0, Ea=10000.0, T0=298.15)
+        Tlist = numpy.arange(300, 2001, 100, numpy.float64)
+
+        klist0 = numpy.zeros_like(Tlist)
+        for i in range(Tlist.shape[0]):
+            klist0[i] = kinetics.getRateCoefficient(Tlist[i])
+
+        kinetics.changeT0(1.0)
+        klist = numpy.zeros_like(Tlist)
+        for i in range(Tlist.shape[0]):
+            klist[i] = kinetics.getRateCoefficient(Tlist[i])
+        
+        for i in range(Tlist.shape[0]):
+            self.assertAlmostEqual(klist0[i], klist[i], 6)
+
+    def testArrheniusFitToData(self):
+        """
+        Test the ArrheniusModel.fitToData() method.
+        """
+        kinetics0 = ArrheniusModel(A=1.0e6, n=1.0, Ea=10000.0, T0=298.15)
+        Tlist = numpy.arange(300, 2001, 100, numpy.float64)
+        klist = numpy.zeros_like(Tlist)
+        for i in range(Tlist.shape[0]):
+            klist[i] = kinetics0.getRateCoefficient(Tlist[i])
+
+        kinetics = ArrheniusModel()
+        kinetics.fitToData(Tlist, klist, kinetics0.T0)
+
+        self.assertAlmostEqual(kinetics0.A, kinetics.A, 6)
+        self.assertAlmostEqual(kinetics0.n, kinetics.n, 6)
+        self.assertAlmostEqual(kinetics0.T0, kinetics.T0, 6)
+        self.assertAlmostEqual(kinetics0.Ea, kinetics.Ea, 6)
+
+    def testPDepArrheniusFitToData(self):
+        """
+        Test the PDepArrheniusModel.fitToData() method.
+        """
+
+        P0 = 1e3; P1 = 1e5
+        arrh0 = ArrheniusModel(A=1.0e6, n=1.0, Ea=10000.0, T0=298.15, Tmin=300, Tmax=2000, numReactants=2, comment='These parameters are completely made up')
+        arrh1 = ArrheniusModel(A=1.0e12, n=0.0, Ea=20000.0, T0=298.15, Tmin=300, Tmax=2000, numReactants=2, comment='These parameters are also completely made up')
+
+        Tlist = numpy.arange(300, 2001, 100, numpy.float64)
+        Plist = numpy.array([P0, P1], numpy.float64)
+        K = numpy.zeros((len(Tlist), 2), numpy.float64)
+        for i in range(Tlist.shape[0]):
+            K[i,0] = arrh0.getRateCoefficient(Tlist[i], P0)
+            K[i,1] = arrh1.getRateCoefficient(Tlist[i], P1)
+
+        kinetics = PDepArrheniusModel()
+        kinetics.fitToData(Tlist, Plist, K, T0=298.15)
+
+        self.assertTrue(len(kinetics.pressures), 2)
+        self.assertTrue(len(kinetics.arrhenius), 2)
+        self.assertAlmostEqual(kinetics.arrhenius[0].A, arrh0.A, 6)
+        self.assertAlmostEqual(kinetics.arrhenius[0].n, arrh0.n, 6)
+        self.assertAlmostEqual(kinetics.arrhenius[0].T0, arrh0.T0, 6)
+        self.assertAlmostEqual(kinetics.arrhenius[0].Ea, arrh0.Ea, 6)
+        self.assertAlmostEqual(kinetics.arrhenius[1].A / 1.0e12, arrh1.A / 1.0e12, 6)
+        self.assertAlmostEqual(kinetics.arrhenius[1].n, arrh1.n, 6)
+        self.assertAlmostEqual(kinetics.arrhenius[1].T0, arrh1.T0, 6)
+        self.assertAlmostEqual(kinetics.arrhenius[1].Ea, arrh1.Ea, 6)
+
+    def testChebyshevFitToData(self):
+        """
+        Test the ChebyshevModel.fitToData() method.
+        """
+
+        coeffs = numpy.array([[1.0e0,2.0e-3,3.0e-6], [4.0e0,5.0e-3,6.0e-6], [7.0e0,8.0e-3,9.0e-6], [10.0e0,11.0e-3,12.0e-6]], numpy.float64)
+
+        kinetics0 = ChebyshevModel(coeffs=coeffs, Tmin=300, Tmax=2000, Pmin=1e3, Pmax=1e7, numReactants=2, comment='These parameters are completely made up and unrealistic')
+
+        Tlist = numpy.arange(300, 2001, 100, numpy.float64)
+        Plist = numpy.array([1e3, 1e4, 1e5, 1e6, 1e7], numpy.float64)
+        K = numpy.zeros((len(Tlist), len(Plist)), numpy.float64)
+        for i in range(len(Tlist)):
+            for j in range(len(Plist)):
+                K[i,j] = kinetics0.getRateCoefficient(Tlist[i], Plist[j])
+
+        kinetics = ChebyshevModel()
+        kinetics.fitToData(Tlist, Plist, K, degreeT=4, degreeP=3, Tmin=300, Tmax=2000, Pmin=1e3, Pmax=1e7)
+
+        self.assertEqual(kinetics0.degreeT, kinetics.degreeT)
+        self.assertEqual(kinetics0.degreeP, kinetics.degreeP)
+        for i in range(kinetics0.degreeT):
+            for j in range(kinetics0.degreeP):
+                self.assertAlmostEqual(kinetics0.coeffs[i,j], kinetics.coeffs[i,j], 6)
+        self.assertEqual(kinetics0.Tmin, kinetics.Tmin)
+        self.assertEqual(kinetics0.Tmax, kinetics.Tmax)
+        self.assertEqual(kinetics0.Pmin, kinetics.Pmin)
+        self.assertEqual(kinetics0.Pmax, kinetics.Pmax)
+
+    def testArrheniusEPToArrhenius(self):
+        """
+        Test the ArrheniusEPModel.toArrhenius() method.
+        """
+        kinetics0 = ArrheniusEPModel(A=1.0e6, n=1.0, alpha=0.5, E0=10000.0)
+
+        Tlist = numpy.arange(300, 2001, 100, numpy.float64)
+        dHrxnlist = numpy.arange(-100000, 100001, 10000, numpy.float64)
+
+        for dHrxn in dHrxnlist:
+            kinetics = kinetics0.toArrhenius(dHrxn)
+            for T in Tlist:
+                k0 = kinetics0.getRateCoefficient(T, dHrxn)
+                k = kinetics.getRateCoefficient(T)
+            self.assertAlmostEqual(k0, k, 6)
+
     def testPickleArrhenius(self):
         """
         Test that an ArrheniusModel object can be successfully pickled and

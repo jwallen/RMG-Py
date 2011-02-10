@@ -214,7 +214,7 @@ class ArrheniusModel(KineticsModel):
         Changes the reference temperature used in the exponent to `T0`, and
         adjusts the preexponential accordingly.
         """
-        self.A = (self.T0 / T0)**self.n
+        self.A *= (T0 / self.T0)**self.n
         self.T0 = T0
 
     def fitToData(self, Tlist, klist, T0=298.15):
@@ -310,7 +310,7 @@ class ArrheniusEPModel(KineticsModel):
         """
         Ea = cython.declare(cython.double)
         Ea = self.getActivationEnergy(dHrxn)
-        return self.A * (T ** self.n) * math.exp(-self.Ea / constants.R / T)
+        return self.A * (T ** self.n) * math.exp(-Ea / constants.R / T)
 
     def toArrhenius(self, dHrxn):
         """
