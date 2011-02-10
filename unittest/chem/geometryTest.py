@@ -10,6 +10,49 @@ from rmgpy.chem.geometry import *
 
 class GeometryTest(unittest.TestCase):
 
+    def testGetTotalMass(self):
+        """
+        Test the Geometry.getTotalMass() method.
+        """
+        # Atomic numbers
+        number = numpy.array([6, 1, 8, 1], numpy.int)
+
+        # Masses should be in kg/mol
+        mass = numpy.array([12.0, 1.0, 16.0, 1.0], numpy.float64) * 0.001
+
+        # Coordinates should be in m
+        position = numpy.zeros((8,3), numpy.float64)
+        position[0,:] = numpy.array([ 0.0, 0.0,-1.0]) * 1e-10
+        position[1,:] = numpy.array([ 1.0, 0.0, 0.0]) * 1e-10
+        position[2,:] = numpy.array([-1.0, 3.0, 2.0]) * 1e-10
+        position[3,:] = numpy.array([ 0.0, 1.0,-1.0]) * 1e-10
+        
+        geometry = Geometry(position, number, mass)
+        self.assertAlmostEqual(geometry.getTotalMass() * 1000., 30., 8)
+
+    def testGetCenterOfMass(self):
+        """
+        Test the Geometry.getCenterOfMass() method.
+        """
+        # Atomic numbers
+        number = numpy.array([1, 1, 1, 6], numpy.int)
+
+        # Masses should be in kg/mol
+        mass = numpy.array([1.0, 1.0, 1.0, 12.0,], numpy.float64) * 0.001
+
+        # Coordinates should be in m
+        position = numpy.zeros((8,3), numpy.float64)
+        position[0,:] = numpy.array([ 0.0, 4.0,-4.0]) * 1e-10
+        position[1,:] = numpy.array([ 1.0, 2.0, 0.0]) * 1e-10
+        position[2,:] = numpy.array([-1.0,-3.0, 1.0]) * 1e-10
+        position[3,:] = numpy.array([ 0.0, 1.0,-1.0]) * 1e-10
+
+        geometry = Geometry(position, number, mass)
+        center = geometry.getCenterOfMass() * 1e10
+        self.assertAlmostEqual(center[0], 0., 8)
+        self.assertAlmostEqual(center[1], 1.0, 8)
+        self.assertAlmostEqual(center[2], -1.0, 8)
+
     def testEthaneInternalReducedMomentOfInertia(self):
         """
         Uses an optimum geometry for ethane (CC) to test that the
@@ -17,6 +60,9 @@ class GeometryTest(unittest.TestCase):
         calculated.
         """
         
+        # Atomic numbers
+        number = numpy.array([6, 1, 1, 1, 6, 1, 1, 1], numpy.int)
+
         # Masses should be in kg/mol
         mass = numpy.array([12.0, 1.0, 1.0, 1.0, 12.0, 1.0, 1.0, 1.0], numpy.float64) * 0.001
         
@@ -31,7 +77,7 @@ class GeometryTest(unittest.TestCase):
         position[6,:] = numpy.array([-1.607276, -0.890277, -1.177452]) * 1e-10
         position[7,:] = numpy.array([-0.11271 , -1.833701, -1.177357]) * 1e-10
         
-        geometry = Geometry(position, mass)
+        geometry = Geometry(position, number, mass)
         
         pivots = [0, 4]
         top = [0, 1, 2, 3]
@@ -47,6 +93,9 @@ class GeometryTest(unittest.TestCase):
         calculated.
         """
         
+        # Atomic numbers
+        number = numpy.array([6, 1, 1, 1, 6, 1, 1, 6, 1, 6, 1, 1, 1, 8, 1], numpy.int)
+
         # Masses should be in kg/mol
         mass = numpy.array([12.0107, 1.00794, 1.00794, 1.00794, 12.0107, 1.00794, 1.00794, 12.0107, 1.00794, 12.0107, 1.00794, 1.00794, 1.00794, 15.9994, 1.00794], numpy.float64) * 0.001
         
@@ -68,7 +117,7 @@ class GeometryTest(unittest.TestCase):
         position[13,:] = numpy.array([ 0.521504,  1.410171,  0.056819]) * 1e-10
         position[14,:] = numpy.array([ 0.657443,  1.437685,  1.010704]) * 1e-10
         
-        geometry = Geometry(position, mass)
+        geometry = Geometry(position, number, mass)
         
         pivots = [0, 4]
         top = [0, 1, 2, 3]
@@ -123,6 +172,8 @@ class GeometryTest(unittest.TestCase):
                 self.assertEqual(g0.coordinates[i,j], g.coordinates[i,j])
             self.assertEqual(g0.number[i], g.number[i])
             self.assertEqual(g0.mass[i], g.mass[i])
+
+################################################################################
 
 if __name__ == '__main__':
     unittest.main( testRunner = unittest.TextTestRunner(verbosity=2) )
