@@ -24,53 +24,60 @@
 #
 ################################################################################
 
+cimport numpy
+
+################################################################################
+
 cdef class Vertex(object):
-
-    cdef readonly dict edges
-
-    # These attributes are used in the VF2 graph isomorphism algorithm
-    cdef public short connectivity1
-    cdef public short connectivity2
-    cdef public short connectivity3
-    cdef public short sortingLabel
-    cdef public bint terminal
-    cdef public Vertex mapping
 
     cpdef Vertex copy(self)
 
     cpdef bint equivalent(self, Vertex other) except -2
 
     cpdef bint isSpecificCaseOf(self, Vertex other) except -2
-
-    cpdef resetConnectivityValues(self)
-
-cpdef short getVertexConnectivityValue(Vertex vertex) except 1 # all values should be negative
-
-cpdef short getVertexSortingLabel(Vertex vertex) except -1 # all values should be nonnegative
-
+    
 ################################################################################
 
 cdef class Edge(object):
 
-    cdef readonly Vertex vertex1, vertex2
-    
     cpdef Edge copy(self)
 
     cpdef bint equivalent(Edge self, Edge other) except -2
 
     cpdef bint isSpecificCaseOf(self, Edge other) except -2
 
-    cpdef Vertex getOtherVertex(self, Vertex vertex)
-
 ################################################################################
 
 cdef class Graph:
-
-    cdef public list vertices
+    
+    # Dict-of-dicts representation (fast editing)
+    cdef list vertices_dod
+    cdef dict edges_dod
+    
+    # Compressed sparse row representation (fast iterating)
+    cdef Vertex[::1] vertices_csr
+    cdef Edge[::1] edges_csr                # Array of edges
+    cdef numpy.int32_t[::1] rows_csr        # Array of indices of first nonzero element of each row
+    cdef numpy.int32_t[::1] cols_csr        # Array of column index of each element in edgelist
+    
+    # For graph isomorphism
+    cdef readonly numpy.int32_t[:,::1] connectivity
+    
+    cpdef bint isEditable(self) except -2
+    
+    cpdef bint isTraversable(self) except -2
+    
+    cpdef setEditable(self)
+    
+    cpdef setTraversable(self)
+    
+    cpdef toDictOfDictsFormat(self)
+            
+    cpdef toCompressedSparseRowFormat(self)
 
     cpdef Vertex addVertex(self, Vertex vertex)
 
-    cpdef Edge addEdge(self, Edge edge)
+    cpdef Edge addEdge(self, Vertex vertex1, Vertex vertex2, Edge edge)
 
     cpdef dict getEdges(self, Vertex vertex)
 
@@ -82,7 +89,7 @@ cdef class Graph:
 
     cpdef removeVertex(self, Vertex vertex)
 
-    cpdef removeEdge(self, Edge edge)
+    cpdef removeEdge(self, Vertex vertex1, Vertex vertex2)
 
     cpdef Graph copy(self, bint deep=?)
 
@@ -103,12 +110,14 @@ cdef class Graph:
     cpdef bint isSubgraphIsomorphic(self, Graph other, dict initialMap=?) except -2
 
     cpdef list findSubgraphIsomorphisms(self, Graph other, dict initialMap=?)
+    
+    cpdef bint isMappingValid(self, Graph other, dict mapping) except -2
 
     cpdef bint isCyclic(self) except -2
 
     cpdef bint isVertexInCycle(self, Vertex vertex) except -2
 
-    cpdef bint isEdgeInCycle(self, Edge edge) except -2
+    cpdef bint isEdgeInCycle(self, Vertex vertex1, Vertex vertex2) except -2
 
     cpdef bint __isChainInCycle(self, list chain) except -2
 
@@ -121,5 +130,3 @@ cdef class Graph:
     cpdef list __exploreCyclesRecursively(self, list chain, list cycles)
 
     cpdef list getSmallestSetOfSmallestRings(self)
-    
-    cpdef bint isMappingValid(self, Graph other, dict mapping) except -2

@@ -33,54 +33,23 @@ are the components of a graph.
 """
 
 import logging
+
+import numpy
+
 from .vf2 cimport VF2
 
 ################################################################################
 
 cdef class Vertex(object):
     """
-    A base class for vertices in a graph. Contains several connectivity values
-    useful for accelerating isomorphism searches, as proposed by
-    `Morgan (1965) <http://dx.doi.org/10.1021/c160017a018>`_.
-
-    =================== =============== ========================================
-    Attribute           Type            Description
-    =================== =============== ========================================
-    `connectivity1`     ``int``         The number of nearest neighbors
-    `connectivity2`     ``int``         The sum of the neighbors' `connectivity1` values
-    `connectivity3`     ``int``         The sum of the neighbors' `connectivity2` values
-    `sortingLabel`      ``int``         An integer label used to sort the vertices
-    =================== =============== ========================================
-    
+    A base class for vertices in a graph.
     """
-
-    def __init__(self):
-        self.edges = {}
-        self.resetConnectivityValues()
 
     def __reduce__(self):
         """
         A helper function used when pickling an object.
         """
-        d = {
-            'edges': self.edges,
-            'connectivity1': self.connectivity1,
-            'connectivity2': self.connectivity2,
-            'connectivity3': self.connectivity3,
-            'sortingLabel': self.sortingLabel,
-            'terminal': self.terminal,
-            'mapping': self.mapping,
-        }
-        return (Vertex, (), d)
-
-    def __setstate__(self, d):
-        self.edges = d['edges']
-        self.connectivity1 = d['connectivity1']
-        self.connectivity2 = d['connectivity2']
-        self.connectivity3 = d['connectivity3']
-        self.sortingLabel = d['sortingLabel']
-        self.terminal = d['terminal']
-        self.mapping = d['mapping']
+        return (Vertex, ())
 
     cpdef Vertex copy(self):
         """
@@ -93,46 +62,19 @@ cdef class Vertex(object):
 
     cpdef bint equivalent(self, Vertex other) except -2:
         """
-        Return :data:`True` if two vertices `self` and `other` are semantically
-        equivalent, or :data:`False` if not. You should reimplement this
-        function in a derived class if your vertices have semantic information.
+        Return ``True`` if vertices `self` and `other` are semantically
+        equivalent, or ``False`` if not. You should reimplement this function
+        in a derived class if your vertices have semantic information.
         """
         return True
 
     cpdef bint isSpecificCaseOf(self, Vertex other) except -2:
         """
-        Return ``True`` if `self` is semantically more specific than `other`,
-        or ``False`` if not. You should reimplement this function in a derived
-        class if your edges have semantic information.
+        Return ``True`` if vertex `self` is semantically a subtype of vertex 
+        `other`, or ``False`` if not. You should reimplement this function in a
+        derived class if your edges have semantic information.
         """
         return True
-
-    cpdef resetConnectivityValues(self):
-        """
-        Reset the cached structure information for this vertex.
-        """
-        self.connectivity1 = -1
-        self.connectivity2 = -1
-        self.connectivity3 = -1
-        self.sortingLabel = -1
-        self.terminal = False
-        self.mapping = None
-
-cpdef short getVertexConnectivityValue(Vertex vertex) except 1:
-    """
-    Return a value used to sort vertices prior to poposing candidate pairs in
-    :meth:`__VF2_pairs`. The value returned is based on the vertex's
-    connectivity values (and assumes that they are set properly).
-    """
-    return ( -256*vertex.connectivity1 - 16*vertex.connectivity2 - vertex.connectivity3 )
-
-cpdef short getVertexSortingLabel(Vertex vertex) except -1:
-    """
-    Return a value used to sort vertices prior to poposing candidate pairs in
-    :meth:`__VF2_pairs`. The value returned is based on the vertex's
-    connectivity values (and assumes that they are set properly).
-    """
-    return vertex.sortingLabel
 
 ################################################################################
 
@@ -143,24 +85,19 @@ cdef class Edge(object):
     in the derived class.
     """
 
-    def __init__(self, vertex1, vertex2):
-        self.vertex1 = vertex1
-        self.vertex2 = vertex2
-
     def __reduce__(self):
         """
         A helper function used when pickling an object.
         """
-        return (Edge, (self.vertex1, self.vertex2))
+        return (Edge, ())
 
     cpdef Edge copy(self):
         """
         Return a copy of the edge. The default implementation assumes that no
         semantic information is associated with each edge, and therefore
-        simply returns a new :class:`Edge` object. Note that the vertices are
-        not copied in this implementation.
+        simply returns a new :class:`Edge` object.
         """
-        new = Edge(self.vertex1, self.vertex2)
+        new = Edge()
         return new
 
     cpdef bint equivalent(self, Edge other) except -2:
@@ -173,81 +110,234 @@ cdef class Edge(object):
 
     cpdef bint isSpecificCaseOf(self, Edge other) except -2:
         """
-        Return ``True`` if `self` is semantically more specific than `other`,
-        or ``False`` if not. You should reimplement this function in a derived
-        class if your edges have semantic information.
+        Return ``True`` if edge `self` is semantically a subtype of edge 
+        `other`, or ``False`` if not. You should reimplement this function in a
+        derived class if your edges have semantic information.
         """
         return True
-
-    cpdef Vertex getOtherVertex(self, Vertex vertex):
-        """
-        Given a vertex that makes up part of the edge, return the other vertex.
-        Raise a :class:`ValueError` if the given vertex is not part of the
-        edge.
-        """
-        if self.vertex1 is vertex:
-            return self.vertex2
-        elif self.vertex2 is vertex:
-            return self.vertex1
-        else:
-            raise ValueError('The given vertex is not one of the vertices of this edge.')
 
 ################################################################################
 
 cdef VF2 vf2 = VF2()
 
 cdef class Graph:
-    """
-    A graph data type. The vertices of the graph are stored in a list
-    `vertices`; this provides a consistent traversal order. The edges of the
-    graph are stored in a dictionary of dictionaries `edges`. A single edge can
-    be accessed using ``graph.edges[vertex1][vertex2]`` or the :meth:`getEdge`
-    method; in either case, an exception will be raised if the edge does not
-    exist. All edges of a vertex can be accessed using ``graph.edges[vertex]``
-    or the :meth:`getEdges` method.
-    """
 
-    def __init__(self, vertices=None):
-        self.vertices = vertices or []
-        
+    def __init__(self, vertices=None, edges=None):
+        # Dict-of-dicts representation (fast editing)
+        self.vertices_dod = vertices or []
+        self.edges_dod = edges or {}
+        # Compressed sparse row representation (fast iterating)
+        self.vertices_csr = None
+        self.edges_csr = None
+        self.rows_csr = None
+        self.cols_csr = None
+        self.connectivity = None
+
     def __reduce__(self):
         """
         A helper function used when pickling an object.
         """
-        return (Graph, (self.vertices,))
+        return (Graph, (self.vertices, self.edges))
+    
+    property vertices:
+        def __get__(self):
+            cdef int i
+            if self.vertices_dod is not None:
+                return self.vertices_dod
+            elif self.vertices_csr is not None:
+                vertices_dod = []
+                for i in range(self.vertices_csr.shape[0]):
+                    vertices_dod.append(self.vertices_csr[i])
+                return vertices_dod
+            else:
+                return []
+
+    property edges:
+        def __get__(self):
+            cdef int row, col
+            if self.edges_dod is not None:
+                return self.edges_dod
+            elif self.edges_csr is not None:
+                edges_dod = {}
+                for row in range(self.vertices_csr.shape[0]):
+                    vertex1 = self.vertices_csr[row]
+                    edges = {}
+                    edges_dod[vertex1] = edges
+                    for col in range(self.rows_csr[row], self.rows_csr[row+1]):
+                        edge = self.edges_csr[col]
+                        vertex2 = self.vertices_csr[self.cols_csr[col]]
+                        edges[vertex2] = edge
+                return edges_dod
+            else:
+                return {}
+            
+    cpdef bint isEditable(self) except -2:
+        """
+        Return ``True`` if the graph is currently stored in a format suitable
+        for quick editing, or ``False`` otherwise.
+        """
+        return self.vertices_dod is not None
+    
+    cpdef bint isTraversable(self) except -2:
+        """
+        Return ``True`` if the graph is currently stored in a format suitable
+        for quick traversal, or ``False`` otherwise.
+        """
+        return self.vertices_csr is not None
+    
+    cpdef setEditable(self):
+        """
+        Convert the internal representation of the graph to a format suitable
+        for quick editing.
+        """
+        if self.vertices_dod is not None: return
+        # Set to dict-of-dicts format (fast editing)
+        self.toDictOfDictsFormat()
+            
+    cpdef setTraversable(self):
+        """
+        Convert the internal representation of the graph to a format suitable
+        for quick traversal.
+        """
+        if self.vertices_csr is not None: return
+        # Set to compressed sparse row format (fast iterating)
+        self.toCompressedSparseRowFormat()
+            
+    cpdef toDictOfDictsFormat(self):
+        """
+        Convert the internal representation of the graph to use dict-of-dicts
+        (DoD) format. This format provides very efficient editing of the items
+        in the graph, but very slow traversal.
+        """
+        cdef int Nvertices, Nedges, row, col, index
+        cdef dict edges
+        
+        Nvertices = self.vertices_csr.shape[0]
+        Nedges = self.edges_csr.shape[0]
+        
+        self.vertices_dod = []
+        self.edges_dod = {}
+        
+        for row in range(Nvertices):
+            vertex1 = self.vertices_csr[row]
+            self.vertices_dod.append(vertex1)
+            edges = {}
+            self.edges_dod[vertex1] = edges
+            for col in range(self.rows_csr[row], self.rows_csr[row+1]):
+                edge = self.edges_csr[col]
+                vertex2 = self.vertices_csr[self.cols_csr[col]]
+                edges[vertex2] = edge
+                
+        # Clear compressed sparse row format data
+        self.vertices_csr = None
+        self.edges_csr = None
+        self.rows_csr = None
+        self.cols_csr = None
+   
+    cpdef toCompressedSparseRowFormat(self):
+        """
+        Convert the internal representation of the graph to use compressed
+        sparse row (CSR) format. This format provides very efficient traversal
+        of the items in the graph, but very slow editing.
+        """
+        cdef int Nvertices, Nedges, i, j, index
+        cdef Vertex vertex, vertex2
+        cdef Edge edge
+    
+        # First sort the vertices
+        self.updateConnectivityValues()
+        self.sortVertices()
+
+        # Count the numbers of vertices and edges
+        Nvertices = len(self.vertices_dod)
+        Nedges = 0
+        for i in range(Nvertices):
+            Nedges += len(self.edges_dod[self.vertices_dod[i]])
+        
+        # Allocate memory for the CSR format
+        # This should require quite a bit less memory than the DoD format
+        self.vertices_csr = numpy.empty(Nvertices, object)  #array(shape=(Nvertices,), itemsize=sizeof(Vertex))
+        self.edges_csr = numpy.empty(Nedges, object)  #array(shape=(Nedges,), itemsize=sizeof(Edge))
+        self.rows_csr = numpy.empty(Nvertices+1, numpy.int32)
+        self.cols_csr = numpy.empty(Nedges, numpy.int32)
+        
+        # Copy the vertices and edges from the DoD format to the CSR format
+        index = 0
+        for i in range(Nvertices):
+            vertex = self.vertices_dod[i]
+            self.vertices_csr[i] = vertex
+            self.rows_csr[i] = index
+            for vertex2, edge in self.edges_dod[vertex].items():
+                j = self.vertices_dod.index(vertex2)
+                self.edges_csr[index] = edge
+                self.cols_csr[index] = j
+                index += 1
+        self.rows_csr[Nvertices] = Nedges
+        
+        # Clear dict of dicts (DoD) format data
+        self.vertices_dod = None
+        self.edges_dod = None
 
     cpdef Vertex addVertex(self, Vertex vertex):
         """
         Add a `vertex` to the graph. The vertex is initialized with no edges.
         """
-        self.vertices.append(vertex)
-        vertex.edges = dict()
+        assert self.isEditable()
+        self.vertices_dod.append(vertex)
+        self.edges_dod[vertex] = dict()
         return vertex
 
-    cpdef Edge addEdge(self, Edge edge):
+    cpdef Edge addEdge(self, Vertex vertex1, Vertex vertex2, Edge edge):
         """
         Add an `edge` to the graph. The two vertices in the edge must already
         exist in the graph, or a :class:`ValueError` is raised.
         """
-        if edge.vertex1 not in self.vertices or edge.vertex2 not in self.vertices:
+        assert vertex1 is not vertex2
+        assert self.isEditable()
+        if vertex1 not in self.vertices_dod or vertex2 not in self.vertices_dod:
             raise ValueError('Attempted to add edge between vertices not in the graph.')
-        edge.vertex1.edges[edge.vertex2] = edge
-        edge.vertex2.edges[edge.vertex1] = edge
+        self.edges_dod[vertex1][vertex2] = edge
+        self.edges_dod[vertex2][vertex1] = edge
         return edge
 
     cpdef dict getEdges(self, Vertex vertex):
         """
         Return a list of the edges involving the specified `vertex`.
         """
-        return vertex.edges
+        cdef int row, col, index
+        cdef dict edges
+        if self.isEditable():
+            try:
+                return self.edges_dod[vertex]
+            except KeyError:
+                raise ValueError('The specified vertex is not in this graph.')
+        else:
+            for row in range(self.vertices_csr.shape[0]):
+                if self.vertices_csr[row] is vertex:
+                    edges = {}
+                    for col in range(self.rows_csr[row], self.rows_csr[row+1]):
+                        index = self.cols_csr[col]
+                        edges[self.vertices_csr[index]] = self.edges_csr[col]
+                    return edges
+            raise ValueError('The specified vertex is not in this graph.')
 
     cpdef Edge getEdge(self, Vertex vertex1, Vertex vertex2):
         """
         Returns the edge connecting vertices `vertex1` and `vertex2`.
         """
-        try:
-            return vertex1.edges[vertex2]
-        except KeyError:
+        cdef int row, col, index
+        if self.isEditable():
+            try:
+                return self.edges_dod[vertex1][vertex2]
+            except KeyError:
+                raise ValueError('The specified vertices are not connected by an edge in this graph.')
+        else:
+            for row in range(self.vertices_csr.shape[0]):
+                if self.vertices_csr[row] is vertex1:
+                    for col in range(self.rows_csr[row], self.rows_csr[row+1]):
+                        index = self.cols_csr[col]
+                        if self.vertices_csr[index] is vertex2:
+                            return self.edges_csr[col]
             raise ValueError('The specified vertices are not connected by an edge in this graph.')
 
     cpdef bint hasVertex(self, Vertex vertex) except -2:
@@ -255,14 +345,27 @@ cdef class Graph:
         Returns ``True`` if `vertex` is a vertex in the graph, or ``False`` if
         not.
         """
-        return vertex in self.vertices
+        if self.isEditable():
+            return vertex in self.vertices_dod
+        else:
+            return vertex in self.vertices_csr
 
     cpdef bint hasEdge(self, Vertex vertex1, Vertex vertex2) except -2:
         """
         Returns ``True`` if vertices `vertex1` and `vertex2` are connected
         by an edge, or ``False`` if not.
         """
-        return vertex1 in self.vertices and vertex2 in vertex1.edges
+        cdef int i, row, col
+        if self.isEditable():
+            return vertex1 in self.vertices_dod and vertex2 in self.edges_dod[vertex1]
+        else:
+            for i in range(self.vertices_csr.shape[0]):
+                if self.vertices_csr[i] is vertex1:
+                    for row in range(self.rows_csr[i], self.rows_csr[i+1]):
+                        col = self.cols_csr[row]
+                        if self.vertices_csr[col] is vertex2:
+                            return True
+            return False
 
     cpdef removeVertex(self, Vertex vertex):
         """
@@ -270,20 +373,23 @@ cdef class Graph:
         not remove vertices that no longer have any edges as a result of this
         removal.
         """
+        assert self.isEditable()
         cdef Vertex vertex2
-        for vertex2 in vertex.edges:
-            del vertex2.edges[vertex]
-        vertex.edges = dict()
-        self.vertices.remove(vertex)
+        for vertex2 in self.edges_dod[vertex]:
+            assert vertex2 is not vertex
+            del self.edges_dod[vertex2][vertex]
+        del self.edges_dod[vertex]
+        self.vertices_dod.remove(vertex)
 
-    cpdef removeEdge(self, Edge edge):
+    cpdef removeEdge(self, Vertex vertex1, Vertex vertex2):
         """
         Remove the specified `edge` from the graph.
         Does not remove vertices that no longer have any edges as a result of
         this removal.
         """
-        del edge.vertex1.edges[edge.vertex2]
-        del edge.vertex2.edges[edge.vertex1]
+        assert self.isEditable()
+        del self.edges_dod[vertex1][vertex2]
+        del self.edges_dod[vertex2][vertex1]
 
     cpdef Graph copy(self, bint deep=False):
         """
@@ -293,52 +399,76 @@ cdef class Graph:
         original vertices and edges are used in the new graph.
         """
         cdef Graph other
-        cdef Vertex vertex, vertex1, vertex2
+        cdef Vertex vertex1, vertex2
         cdef Edge edge
-        cdef dict edges, mapping
-        cdef list vertices
-        cdef int index1, index2
+        cdef int Nvertices, row, col, index
+        cdef dict mapping
         
         other = Graph()
-        vertices = self.vertices
         mapping = {}
-        for vertex in vertices:
-            if deep:
-                vertex2 = other.addVertex(vertex.copy())
-                mapping[vertex] = vertex2
-            else:
-                edges = vertex.edges
-                other.addVertex(vertex)
-                vertex.edges = edges
-        if deep:
-            for vertex1 in vertices:
-                for vertex2 in vertex1.edges:
-                    edge = vertex1.edges[vertex2]
-                    edge = edge.copy()
-                    edge.vertex1 = mapping[vertex1]
-                    edge.vertex2 = mapping[vertex2]
-                    other.addEdge(edge)
+        
+        if self.isEditable():
+            for vertex1 in self.vertices_dod:
+                if deep:
+                    mapping[vertex1] = vertex1.copy()
+                    other.addVertex(mapping[vertex1])
+                else:    
+                    other.addVertex(vertex1)
+            for vertex1 in self.vertices_dod:
+                for vertex2, edge in self.edges_dod[vertex1].items():
+                    if deep:
+                        other.addEdge(mapping[vertex1], mapping[vertex2], edge.copy())
+                    else:
+                        other.addEdge(vertex1, vertex2, edge)
+        else:
+            Nvertices = self.vertices_csr.shape[0]
+            for row in range(Nvertices):
+                vertex1 = self.vertices_csr[row]
+                if deep:
+                    mapping[vertex1] = vertex1.copy()
+                    other.addVertex(mapping[vertex1])
+                else:    
+                    other.addVertex(vertex1)
+        
+            for row in range(Nvertices):
+                vertex1 = self.vertices_csr[row]
+                for col in range(self.rows_csr[row], self.rows_csr[row+1]):
+                    index = self.cols_csr[col]
+                    vertex2 = self.vertices_csr[index]
+                    edge = self.edges_csr[col]
+                    if deep:
+                        other.addEdge(mapping[vertex1], mapping[vertex2], edge.copy())
+                    else:
+                        other.addEdge(vertex1, vertex2, edge)
+
         return other
 
     cpdef Graph merge(self, Graph other):
         """
         Merge two graphs so as to store them in a single Graph object.
         """
-        cdef Graph new
+        cdef Graph graph, new
         cdef Vertex vertex, vertex1, vertex2
+        
+        assert self.isEditable()
+        assert other.isEditable()
         
         # Create output graph
         new = Graph()
 
-        # Add vertices to output graph
-        for vertex in self.vertices:
-            edges = vertex.edges
-            new.addVertex(vertex)
-            vertex.edges = edges
-        for vertex in other.vertices:
-            edges = vertex.edges
-            new.addVertex(vertex)
-            vertex.edges = edges
+        # Add self to output graph
+        for vertex1 in self.vertices_dod:
+            new.addVertex(vertex1)
+        for vertex1 in self.vertices_dod:
+            for vertex2, edge in self.edges_dod[vertex1].items():
+                new.addEdge(vertex1, vertex2, edge)
+
+        # Add other to output graph
+        for vertex1 in other.vertices:
+            new.addVertex(vertex1)
+        for vertex1 in other.vertices:
+            for vertex2, edge in other.edges_dod[vertex1].items():
+                new.addEdge(vertex1, vertex2, edge)
 
         return new
 
@@ -352,20 +482,22 @@ cdef class Graph:
         cdef list verticesToMove
         cdef int index
         
+        assert self.isEditable()
+
         # Create potential output graphs
         new1 = self.copy()
         new2 = Graph()
 
-        if len(self.vertices) == 0:
+        if len(self.vertices_dod) == 0:
             return [new1]
 
         # Arbitrarily choose last atom as starting point
-        verticesToMove = [ self.vertices[-1] ]
+        verticesToMove = [ self.vertices_dod[-1] ]
 
         # Iterate until there are no more atoms to move
         index = 0
         while index < len(verticesToMove):
-            for v2 in verticesToMove[index].edges:
+            for v2 in self.edges_dod[verticesToMove[index]]:
                 if v2 not in verticesToMove:
                     verticesToMove.append(v2)
             index += 1
@@ -376,60 +508,89 @@ cdef class Graph:
 
         # Copy to new graph and remove from old graph
         for vertex in verticesToMove:
-            new2.vertices.append(vertex)
-            new1.vertices.remove(vertex)
+            new2.addVertex(vertex)
+        for vertex1 in verticesToMove:
+            for vertex2, edge in new1.edges_dod[vertex1].items():
+                new2.addEdge(vertex1, vertex2, edge)
+        for vertex in verticesToMove:
+            new1.removeVertex(vertex)
         
         new = [new2]
         new.extend(new1.split())
         return new
-
+    
     cpdef resetConnectivityValues(self):
         """
-        Reset any cached connectivity information. Call this method when you
-        have modified the graph.
+        Reset the connectivity values for each vertex in the graph. This will
+        force them to be recalculated.
         """
-        cdef Vertex vertex
-        for vertex in self.vertices: vertex.resetConnectivityValues()
-        
+        self.connectivity = None
+
     cpdef updateConnectivityValues(self):
         """
         Update the connectivity values for each vertex in the graph. These are
         used to accelerate the isomorphism checking.
         """
         cdef Vertex vertex1, vertex2
-        cdef short count
+        cdef int Nvertices, index1, index2, count, k
         
-        for vertex1 in self.vertices:
-            count = len(vertex1.edges)
-            vertex1.connectivity1 = count
-        for vertex1 in self.vertices:
-            count = 0
-            for vertex2 in vertex1.edges: count += vertex2.connectivity1
-            vertex1.connectivity2 = count
-        for vertex1 in self.vertices:
-            count = 0
-            for vertex2 in vertex1.edges: count += vertex2.connectivity2
-            vertex1.connectivity3 = count
+        assert self.isEditable()
         
+        Nvertices = len(self.vertices_dod)
+        self.connectivity = numpy.zeros((Nvertices,3), numpy.int32)
+
+        for index1 in range(Nvertices):
+            vertex1 = self.vertices_dod[index1]
+            count = len(self.edges_dod[vertex1])
+            self.connectivity[index1,0] = count
+        
+        for index1 in range(Nvertices):
+            vertex1 = self.vertices_dod[index1]
+            count = 0
+            for vertex2 in self.edges_dod[vertex1]: 
+                index2 = self.vertices_dod.index(vertex2)
+                count += self.connectivity[index2,0]
+            self.connectivity[index1,1] = count
+
+        for index1 in range(Nvertices):
+            vertex1 = self.vertices_dod[index1]
+            count = 0
+            for vertex2 in self.edges_dod[vertex1]: 
+                index2 = self.vertices_dod.index(vertex2)
+                count += self.connectivity[index2,1]
+            self.connectivity[index1,2] = count
+    
     cpdef sortVertices(self):
         """
         Sort the vertices in the graph. This can make certain operations, e.g.
         the isomorphism functions, much more efficient.
         """
-        cdef Vertex vertex
-        cdef int index
-        # Only need to conduct sort if there is an invalid sorting label on any vertex
-        for vertex in self.vertices:
-            if vertex.sortingLabel < 0: break
-        else:
-            return
+        cdef int Nvertices, i, j, index, value
+        cdef list vertices
+        cdef numpy.int32_t[:,::1] connectivity
+        
         # If we need to sort then let's also update the connecitivities so
         # we're sure they are right, since the sorting labels depend on them
         self.updateConnectivityValues()
-        self.vertices.sort(key=getVertexConnectivityValue)
-        for index, vertex in enumerate(self.vertices):
-            vertex.sortingLabel = index
+        
+        Nvertices = len(self.vertices_dod)
+        
+        vertices = []
+        for i, vertex in enumerate(self.vertices_dod):
+            value = ( -65536*self.connectivity[i,0] - 256*self.connectivity[i,1] - self.connectivity[i,2] )
+            vertices.append((value, i, vertex))
 
+        vertices = sorted(vertices)
+        connectivity = numpy.zeros((Nvertices,3), numpy.int32)
+        
+        for i in range(Nvertices):
+            value, index, vertex = vertices[i]
+            for j in range(3):
+                connectivity[i,j] = self.connectivity[index,j]
+        
+        self.vertices_dod = [vertex for value, index, vertex in vertices]
+        self.connectivity = connectivity
+        
     cpdef bint isIsomorphic(self, Graph other, dict initialMap=None) except -2:
         """
         Returns :data:`True` if two graphs are isomorphic and :data:`False`
@@ -461,6 +622,43 @@ cdef class Graph:
         """
         return vf2.findSubgraphIsomorphisms(self, other, initialMap)
 
+    cpdef bint isMappingValid(self, Graph other, dict mapping) except -2:
+        """
+        Check that a proposed `mapping` of vertices from `self` to `other`
+        is valid by checking that the vertices and edges involved in the
+        mapping are mutually equivalent.
+        """
+        cdef Vertex vertex1, vertex2
+        cdef list vertices1, vert
+        cdef bint selfHasEdge, otherHasEdge
+        cdef int i, j
+        
+        # Check that the mapped pairs of vertices are equivalent
+        for vertex1, vertex2 in mapping.items():
+            if not vertex1.equivalent(vertex2):
+                return False
+        
+        # Check that any edges connected mapped vertices are equivalent
+        vertices1 = mapping.keys()
+        vertices2 = mapping.values()
+        for i in range(len(vertices1)):
+            for j in range(i+1, len(vertices1)):
+                selfHasEdge = self.hasEdge(vertices1[i], vertices1[j])
+                otherHasEdge = other.hasEdge(vertices2[i], vertices2[j])
+                if selfHasEdge and otherHasEdge:
+                    # Both graphs have the edge, so we must check it for equivalence
+                    edge1 = self.getEdge(vertices1[i], vertices1[j])
+                    edge2 = other.getEdge(vertices2[i], vertices2[j])
+                    if not edge1.equivalent(edge2):
+                        return False
+                elif selfHasEdge or otherHasEdge:
+                    # Only one of the graphs has the edge, so the mapping must be invalid
+                    return False
+        
+        # If we're here then the vertices and edges are equivalent, so the
+        # mapping is valid
+        return True
+
     cpdef bint isCyclic(self) except -2:
         """
         Return ``True`` if one or more cycles are present in the graph or
@@ -479,15 +677,15 @@ cdef class Graph:
         """
         return self.__isChainInCycle([vertex])
 
-    cpdef bint isEdgeInCycle(self, Edge edge) except -2:
+    cpdef bint isEdgeInCycle(self, Vertex vertex1, Vertex vertex2) except -2:
         """
         Return :data:`True` if the edge between vertices `vertex1` and `vertex2`
         is in one or more cycles in the graph, or :data:`False` if not.
         """
         cdef list cycles
-        cycles = self.getAllCycles(edge.vertex1)
+        cycles = self.getAllCycles(vertex1)
         for cycle in cycles:
-            if edge.vertex2 in cycle:
+            if vertex2 in cycle:
                 return True
         return False
 
@@ -500,8 +698,10 @@ cdef class Graph:
         cdef Vertex vertex1, vertex2
         cdef Edge edge
 
+        self.setEditable()
+
         vertex1 = chain[-1]
-        for vertex2 in vertex1.edges:
+        for vertex2 in self.edges_dod[vertex1]:
             if vertex2 is chain[0] and len(chain) > 2:
                 return True
             elif vertex2 not in chain:
@@ -551,6 +751,7 @@ cdef class Graph:
         Given a starting vertex, returns a list of all the cycles containing
         that vertex.
         """
+        assert self.isEditable()
         return self.__exploreCyclesRecursively([startingVertex], [])
 
     cpdef list __exploreCyclesRecursively(self, list chain, list cycles):
@@ -564,7 +765,7 @@ cdef class Graph:
         
         vertex1 = chain[-1]
         # Loop over each of the atoms neighboring the last atom in the chain
-        for vertex2 in vertex1.edges:
+        for vertex2 in self.edges_dod[vertex1]:
             if vertex2 is chain[0] and len(chain) > 2:
                 # It is the first atom in the chain, so the chain is a cycle!
                 cycles.append(chain[:])
@@ -602,7 +803,7 @@ cdef class Graph:
         while not done:
             verticesToRemove = []
             for vertex in graph.vertices:
-                if len(vertex.edges) == 1: verticesToRemove.append(vertex)
+                if len(graph.edges_dod[vertex]) == 1: verticesToRemove.append(vertex)
             done = len(verticesToRemove) == 0
             # Remove identified vertices from graph
             for vertex in verticesToRemove:
@@ -632,7 +833,7 @@ cdef class Graph:
                 for vertex in graph.vertices:
                     if rootVertex is None:
                         rootVertex = vertex
-                    elif len(vertex.edges) < len(rootVertex.edges):
+                    elif len(graph.edges_dod[vertex]) < len(graph.edges_dod[rootVertex]):
                         rootVertex = vertex
 
                 # Get all cycles involving the root vertex
@@ -652,13 +853,13 @@ cdef class Graph:
                 # Remove from the graph all vertices in the cycle that have only two edges
                 verticesToRemove = []
                 for vertex in cycle:
-                    if len(vertex.edges) <= 2:
+                    if len(graph.edges_dod[vertex]) <= 2:
                         verticesToRemove.append(vertex)
                 if len(verticesToRemove) == 0:
                     # there are no vertices in this cycle that with only two edges
                     # Remove edge between root vertex and any one vertex it is connected to
-                    vertex = rootVertex.edges.keys()[0]
-                    graph.removeEdge(rootVertex.edges[vertex])
+                    vertex = graph.edges_dod[rootVertex].keys()[0]
+                    graph.removeEdge(rootVertex, vertex)
                 else:
                     for vertex in verticesToRemove:
                         graph.removeVertex(vertex)
@@ -668,40 +869,3 @@ cdef class Graph:
             cycleList[i] = [self.vertices[vertices.index(v)] for v in cycleList[i]]
 
         return cycleList
-
-    cpdef bint isMappingValid(self, Graph other, dict mapping) except -2:
-        """
-        Check that a proposed `mapping` of vertices from `self` to `other`
-        is valid by checking that the vertices and edges involved in the
-        mapping are mutually equivalent.
-        """
-        cdef Vertex vertex1, vertex2
-        cdef list vertices1, vertices2
-        cdef bint selfHasEdge, otherHasEdge
-        cdef int i, j
-        
-        # Check that the mapped pairs of vertices are equivalent
-        for vertex1, vertex2 in mapping.items():
-            if not vertex1.equivalent(vertex2):
-                return False
-        
-        # Check that any edges connected mapped vertices are equivalent
-        vertices1 = mapping.keys()
-        vertices2 = mapping.values()
-        for i in range(len(vertices1)):
-            for j in range(i+1, len(vertices1)):
-                selfHasEdge = self.hasEdge(vertices1[i], vertices1[j])
-                otherHasEdge = other.hasEdge(vertices2[i], vertices2[j])
-                if selfHasEdge and otherHasEdge:
-                    # Both graphs have the edge, so we must check it for equivalence
-                    edge1 = self.getEdge(vertices1[i], vertices1[j])
-                    edge2 = other.getEdge(vertices2[i], vertices2[j])
-                    if not edge1.equivalent(edge2):
-                        return False
-                elif selfHasEdge or otherHasEdge:
-                    # Only one of the graphs has the edge, so the mapping must be invalid
-                    return False
-        
-        # If we're here then the vertices and edges are equivalent, so the
-        # mapping is valid
-        return True
