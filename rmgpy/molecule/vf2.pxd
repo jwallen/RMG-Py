@@ -24,19 +24,25 @@
 #
 ################################################################################
 
-from graph cimport Vertex, Edge, Graph
+cimport numpy
+
+from .graph cimport Vertex, Edge, Graph
 
 cdef class VF2:
 
     cdef Graph graph1, graph2
-    
+    cdef int Nvertices1, Nvertices2
+    cdef int Nedges1, Nedges2
+    cdef numpy.int32_t[::1] mapping1, mapping2
+    cdef numpy.int32_t[::1] terminal1, terminal2
+
     cdef dict initialMapping
     cdef bint subgraph
     cdef bint findAll
     
     cdef bint isMatch
     cdef list mappingList
-    
+
     cpdef bint isIsomorphic(self, Graph graph1, Graph graph2, dict initialMapping) except -2
         
     cpdef list findIsomorphism(self, Graph graph1, Graph graph2, dict initialMapping)
@@ -44,13 +50,13 @@ cdef class VF2:
     cpdef bint isSubgraphIsomorphic(self, Graph graph1, Graph graph2, dict initialMapping) except -2
 
     cpdef list findSubgraphIsomorphisms(self, Graph graph1, Graph graph2, dict initialMapping)
-    
+
     cdef isomorphism(self, Graph graph1, Graph graph2, dict initialMapping, bint subgraph, bint findAll)
 
     cdef bint match(self, int callDepth) except -2
+
+    cdef bint feasible(self, int index1, int index2) except -2
+
+    cdef addToMapping(self, int index1, int index2)
         
-    cdef bint feasible(self, Vertex vertex1, Vertex vertex2) except -2
-    
-    cdef addToMapping(self, Vertex vertex1, Vertex vertex2)
-        
-    cdef removeFromMapping(self, Vertex vertex1, Vertex vertex2)
+    cdef removeFromMapping(self, int index1, int index2)
