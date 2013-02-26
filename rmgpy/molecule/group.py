@@ -88,27 +88,10 @@ class GroupAtom(Vertex):
         """
         A helper function used when pickling an object.
         """
-        d = {
-            'edges': self.edges,
-            'connectivity1': self.connectivity1,
-            'connectivity2': self.connectivity2,
-            'connectivity3': self.connectivity3,
-            'sortingLabel': self.sortingLabel,
-        }
         atomType = self.atomType
         if atomType is not None:
             atomType = [a.label for a in atomType]
-        return (GroupAtom, (atomType, self.radicalElectrons, self.spinMultiplicity, self.charge, self.label), d)
-
-    def __setstate__(self, d):
-        """
-        A helper function used when unpickling an object.
-        """
-        self.edges = d['edges']
-        self.connectivity1 = d['connectivity1']
-        self.connectivity2 = d['connectivity2']
-        self.connectivity3 = d['connectivity3']
-        self.sortingLabel = d['sortingLabel']
+        return (GroupAtom, (atomType, self.radicalElectrons, self.spinMultiplicity, self.charge, self.label))
 
     def __str__(self):
         """
@@ -327,8 +310,8 @@ class GroupBond(Edge):
     group if it matches *any* item in the list.
     """
 
-    def __init__(self, atom1, atom2, order=None):
-        Edge.__init__(self, atom1, atom2)
+    def __init__(self, order=None):
+        Edge.__init__(self)
         self.order = order or []
 
     def __str__(self):
@@ -347,14 +330,14 @@ class GroupBond(Edge):
         """
         A helper function used when pickling an object.
         """
-        return (GroupBond, (self.vertex1, self.vertex2, self.order))
+        return (GroupBond, (self.order,))
 
     def copy(self):
         """
         Return a deep copy of the :class:`GroupBond` object. Modifying the
         attributes of the copy will not affect the original.
         """
-        return GroupBond(self.vertex1, self.vertex2, self.order[:])
+        return GroupBond(self.order[:])
 
     def __changeBond(self, order):
         """
@@ -453,8 +436,8 @@ class Group(Graph):
     Corresponding alias methods have also been provided.
     """
 
-    def __init__(self, atoms=None):
-        Graph.__init__(self, atoms)
+    def __init__(self, atoms=None, bonds=None):
+        Graph.__init__(self, atoms, bonds)
         self.updateConnectivityValues()
         self.updateFingerprint()
     
@@ -462,7 +445,7 @@ class Group(Graph):
         """
         A helper function used when pickling an object.
         """
-        return (Group, (self.vertices,))
+        return (Group, (self.vertices, self.edges))
 
     def __getAtoms(self): return self.vertices
     def __setAtoms(self, atoms): self.vertices = atoms
@@ -474,12 +457,12 @@ class Group(Graph):
         """
         return self.addVertex(atom)
 
-    def addBond(self, bond):
+    def addBond(self, atom1, atom2, bond):
         """
         Add a `bond` to the graph as an edge connecting the two atoms `atom1`
         and `atom2`.
         """
-        return self.addEdge(bond)
+        return self.addEdge(atom1, atom2, bond)
 
     def getBonds(self, atom):
         """
@@ -515,13 +498,13 @@ class Group(Graph):
         """
         return self.removeVertex(atom)
 
-    def removeBond(self, bond):
+    def removeBond(self, atom1, atom2):
         """
         Remove the bond between atoms `atom1` and `atom2` from the graph.
         Does not remove atoms that no longer have any bonds as a result of
         this removal.
         """
-        return self.removeEdge(bond)
+        return self.removeEdge(atom1, atom2)
 
     def sortAtoms(self):
         """
@@ -539,7 +522,7 @@ class Group(Graph):
         """
         other = cython.declare(Group)
         g = Graph.copy(self, deep)
-        other = Group(g.vertices)
+        other = Group(g.vertices, g.edges)
         return other
 
     def merge(self, other):
@@ -549,7 +532,7 @@ class Group(Graph):
         object is returned.
         """
         g = Graph.merge(self, other)
-        molecule = Group(atoms=g.vertices)
+        molecule = Group(g.vertices, g.edges)
         return molecule
 
     def split(self):
@@ -560,7 +543,7 @@ class Group(Graph):
         graphs = Graph.split(self)
         molecules = []
         for g in graphs:
-            molecule = Group(atoms=g.vertices)
+            molecule = Group(g.vertices, g.edges)
             molecules.append(molecule)
         return molecules
 
@@ -612,7 +595,7 @@ class Group(Graph):
         ``False``.
         """
         from .adjlist import fromAdjacencyList
-        self.vertices = fromAdjacencyList(adjlist, group=True)
+        self.vertices_dod, self.edges_dod = fromAdjacencyList(adjlist, group=True)
         self.updateConnectivityValues()
         self.updateFingerprint()
         return self
@@ -622,7 +605,7 @@ class Group(Graph):
         Convert the molecular structure to a string adjacency list.
         """
         from .adjlist import toAdjacencyList
-        return toAdjacencyList(self.vertices, label='', group=True)
+        return toAdjacencyList(self.vertices, self.edges, label='', group=True)
 
     def updateFingerprint(self):
         """

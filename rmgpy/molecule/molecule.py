@@ -100,11 +100,6 @@ class Atom(Vertex):
         A helper function used when pickling an object.
         """
         d = {
-            'edges': self.edges,
-            'connectivity1': self.connectivity1,
-            'connectivity2': self.connectivity2,
-            'connectivity3': self.connectivity3,
-            'sortingLabel': self.sortingLabel,
             'atomType': self.atomType.label if self.atomType else None,
         }
         return (Atom, (self.element.symbol, self.radicalElectrons, self.spinMultiplicity, self.charge, self.label), d)
@@ -113,11 +108,6 @@ class Atom(Vertex):
         """
         A helper function used when unpickling an object.
         """
-        self.edges = d['edges']
-        self.connectivity1 = d['connectivity1']
-        self.connectivity2 = d['connectivity2']
-        self.connectivity3 = d['connectivity3']
-        self.sortingLabel = d['sortingLabel']
         self.atomType = atomTypes[d['atomType']] if d['atomType'] else None
     
     @property
@@ -128,9 +118,6 @@ class Atom(Vertex):
 
     @property
     def symbol(self): return self.element.symbol
-
-    @property
-    def bonds(self): return self.edges
 
     def equivalent(self, other):
         """
@@ -201,8 +188,6 @@ class Atom(Vertex):
         cython.declare(a=Atom)
         #a = Atom(self.element, self.radicalElectrons, self.spinMultiplicity, self.charge, self.label)
         a = Atom.__new__(Atom)
-        a.edges = {}
-        a.resetConnectivityValues()
         a.element = self.element
         a.radicalElectrons = self.radicalElectrons
         a.spinMultiplicity = self.spinMultiplicity
@@ -307,8 +292,8 @@ class Bond(Edge):
 
     """
 
-    def __init__(self, atom1, atom2, order=1):
-        Edge.__init__(self, atom1, atom2)
+    def __init__(self, order=1):
+        Edge.__init__(self)
         self.order = order
 
     def __str__(self):
@@ -327,15 +312,7 @@ class Bond(Edge):
         """
         A helper function used when pickling an object.
         """
-        return (Bond, (self.vertex1, self.vertex2, self.order))
-
-    @property
-    def atom1(self):
-        return self.vertex1
-
-    @property
-    def atom2(self):
-        return self.vertex2
+        return (Bond, (self.order,))
 
     def equivalent(self, other):
         """
@@ -365,11 +342,9 @@ class Bond(Edge):
         Generate a deep copy of the current bond. Modifying the
         attributes of the copy will not affect the original.
         """
-        #return Bond(self.vertex1, self.vertex2, self.order)
+        #return Bond(self.order)
         cython.declare(b=Bond)
         b = Bond.__new__(Bond)
-        b.vertex1 = self.vertex1
-        b.vertex2 = self.vertex2
         b.order = self.order
         return b
 
@@ -478,8 +453,8 @@ class Molecule(Graph):
     `InChI` string representing the molecular structure.
     """
 
-    def __init__(self, atoms=None, symmetry=1, SMILES='', InChI=''):
-        Graph.__init__(self, atoms)
+    def __init__(self, atoms=None, bonds=None, symmetry=1, SMILES='', InChI=''):
+        Graph.__init__(self, atoms, bonds)
         self.symmetryNumber = symmetry
         self._fingerprint = None
         if SMILES != '': self.fromSMILES(SMILES)
@@ -501,11 +476,14 @@ class Molecule(Graph):
         """
         A helper function used when pickling an object.
         """
-        return (Molecule, (self.vertices, self.symmetryNumber))
+        return (Molecule, (self.vertices, self.edges, self.symmetryNumber))
 
     def __getAtoms(self): return self.vertices
     def __setAtoms(self, atoms): self.vertices = atoms
     atoms = property(__getAtoms, __setAtoms)
+
+    @property
+    def bonds(self): return self.edges
 
     def addAtom(self, atom):
         """
@@ -514,13 +492,13 @@ class Molecule(Graph):
         self._fingerprint = None
         return self.addVertex(atom)
     
-    def addBond(self, bond):
+    def addBond(self, atom1, atom2, bond):
         """
         Add a `bond` to the graph as an edge connecting the two atoms `atom1`
         and `atom2`.
         """
         self._fingerprint = None
-        return self.addEdge(bond)
+        return self.addEdge(atom1, atom2, bond)
 
     def getBonds(self, atom):
         """
@@ -557,14 +535,14 @@ class Molecule(Graph):
         self._fingerprint = None
         return self.removeVertex(atom)
 
-    def removeBond(self, bond):
+    def removeBond(self, atom1, atom2):
         """
         Remove the bond between atoms `atom1` and `atom2` from the graph.
         Does not remove atoms that no longer have any bonds as a result of
         this removal.
         """
         self._fingerprint = None
-        return self.removeEdge(bond)
+        return self.removeEdge(atom1, atom2)
 
     def sortAtoms(self):
         """
@@ -656,7 +634,7 @@ class Molecule(Graph):
         """
         other = cython.declare(Molecule)
         g = Graph.copy(self, deep)
-        other = Molecule(g.vertices)
+        other = Molecule(g.vertices, g.edges)
         return other
 
     def merge(self, other):
@@ -665,7 +643,7 @@ class Molecule(Graph):
         object. The merged :class:`Molecule` object is returned.
         """
         g = Graph.merge(self, other)
-        molecule = Molecule(atoms=g.vertices)
+        molecule = Molecule(g.vertices, g.edges)
         return molecule
 
     def split(self):
@@ -676,7 +654,7 @@ class Molecule(Graph):
         graphs = Graph.split(self)
         molecules = []
         for g in graphs:
-            molecule = Molecule(atoms=g.vertices)
+            molecule = Molecule(g.vertices, g.edges)
             molecules.append(molecule)
         return molecules
 
@@ -687,8 +665,9 @@ class Molecule(Graph):
         It destroys information; be careful with it.
         """
         cython.declare(atom=Atom, neighbor=Atom, hydrogens=list)
+        self.setEditable()
         # Check that the structure contains at least one heavy atom
-        for atom in self.vertices:
+        for atom in self.vertices_dod:
             if not atom.isHydrogen():
                 break
         else:
@@ -697,7 +676,7 @@ class Molecule(Graph):
         hydrogens = []
         for atom in self.vertices:
             if atom.isHydrogen() and atom.label == '':
-                neighbor = atom.edges.keys()[0]
+                neighbor = self.edges_dod[atom].keys()[0]
                 hydrogens.append(atom)
         # Remove the hydrogen atoms from the structure
         for atom in hydrogens:
@@ -709,8 +688,9 @@ class Molecule(Graph):
         to ensure they are correct (i.e. accurately describe their local bond
         environment) and complete (i.e. are as detailed as possible).
         """
-        for atom in self.vertices:
-            atom.atomType = getAtomType(atom, atom.edges)
+        self.setEditable()
+        for atom in self.vertices_dod:
+            atom.atomType = getAtomType(atom, self.edges_dod[atom])
 
     def clearLabeledAtoms(self):
         """
@@ -869,12 +849,12 @@ class Molecule(Graph):
         """
         return self.isVertexInCycle(atom)
 
-    def isBondInCycle(self, bond):
+    def isBondInCycle(self, atom1, atom2):
         """
         Return :data:`True` if the bond between atoms `atom1` and `atom2`
         is in one or more cycles in the graph, or :data:`False` if not.
         """
-        return self.isEdgeInCycle(bond)
+        return self.isEdgeInCycle(atom1, atom2)
 
     def draw(self, path):
         """
@@ -950,7 +930,7 @@ class Molecule(Graph):
         cython.declare(radicalElectrons=cython.int, spinMultiplicity=cython.int, charge=cython.int)
         cython.declare(atom=Atom, atom1=Atom, atom2=Atom, bond=Bond)
 
-        self.vertices = []
+        self.vertices_dod = []
 
         # Add hydrogen atoms to complete molecule if needed
         obmol.AddHydrogens()
@@ -983,7 +963,7 @@ class Molecule(Graph):
             charge = obatom.GetFormalCharge()
 
             atom = Atom(element, radicalElectrons, spinMultiplicity, charge)
-            self.vertices.append(atom)
+            self.addVertex(atom)
             
             # Add bonds by iterating again through atoms
             for j in range(0, i):
@@ -998,8 +978,8 @@ class Molecule(Graph):
                     elif obbond.IsTriple(): order = 'T'
                     elif obbond.IsAromatic(): order = 'B'
 
-                    bond = Bond(self.vertices[i], self.vertices[j], order)
-                    self.addBond(bond)
+                    bond = Bond(order)
+                    self.addBond(self.vertices[i], self.vertices[j], bond)
 
         # Set atom types and connectivity values
         self.updateConnectivityValues()
@@ -1014,7 +994,7 @@ class Molecule(Graph):
         ``False``.
         """
         from .adjlist import fromAdjacencyList
-        self.vertices = fromAdjacencyList(adjlist, False)
+        self.vertices_dod, self.edges_dod = fromAdjacencyList(adjlist, False)
         self.updateConnectivityValues()
         self.updateAtomTypes()
         return self
@@ -1109,7 +1089,7 @@ class Molecule(Graph):
 
         # Sort the atoms before converting to ensure output is consistent
         # between different runs
-        self.sortAtoms()
+        #self.sortAtoms()
 
         atoms = self.vertices
 
@@ -1119,8 +1099,9 @@ class Molecule(Graph):
             a.SetAtomicNum(atom.number)
             a.SetFormalCharge(atom.charge)
         orders = {'S': 1, 'D': 2, 'T': 3, 'B': 5}
+        edges = self.edges
         for atom1 in self.vertices:
-            for atom2, bond in atom1.edges.iteritems():
+            for atom2, bond in edges[atom1].iteritems():
                 index1 = atoms.index(atom1)
                 index2 = atoms.index(atom2)
                 if index1 < index2:
@@ -1136,7 +1117,7 @@ class Molecule(Graph):
         Convert the molecular structure to a string adjacency list.
         """
         from .adjlist import toAdjacencyList
-        result = toAdjacencyList(self.vertices, label=label, group=False, removeH=removeH)
+        result = toAdjacencyList(self.vertices, self.edges, label=label, group=False, removeH=removeH)
         return result
 
     def isLinear(self):
@@ -1144,6 +1125,7 @@ class Molecule(Graph):
         Return :data:`True` if the structure is linear and :data:`False`
         otherwise.
         """
+        self.setEditable()
 
         atomCount = len(self.vertices)
 
@@ -1159,15 +1141,15 @@ class Molecule(Graph):
 
         # True if all bonds are double bonds (e.g. O=C=O)
         allDoubleBonds = True
-        for atom1 in self.vertices:
-            for bond in atom1.edges.values():
+        for atom1 in self.vertices_dod:
+            for bond in self.edges_dod[atom1].values():
                 if not bond.isDouble(): allDoubleBonds = False
         if allDoubleBonds: return True
 
         # True if alternating single-triple bonds (e.g. H-C#C-H)
         # This test requires explicit hydrogen atoms
         for atom in self.vertices:
-            bonds = atom.edges.values()
+            bonds = self.edges_dod[atom].values()
             if len(bonds)==1:
                 continue # ok, next atom
             if len(bonds)>2:
@@ -1215,11 +1197,12 @@ class Molecule(Graph):
         bond not in a cycle and between two atoms that also have other bonds
         are considered to be internal rotors.
         """
+        assert self.isEditable()
         count = 0
         for atom1 in self.vertices:
-            for atom2, bond in atom1.edges.items():
-                if self.vertices.index(atom1) < self.vertices.index(atom2) and bond.isSingle() and not self.isBondInCycle(bond):
-                    if len(atom1.edges) > 1 and len(atom2.edges) > 1:
+            for atom2, bond in self.edges_dod[atom1].items():
+                if self.vertices.index(atom1) < self.vertices.index(atom2) and bond.isSingle() and not self.isBondInCycle(atom1, atom2):
+                    if len(self.edges_dod[atom1]) > 1 and len(self.edges_dod[atom2]) > 1:
                         count += 1
         return count
 
@@ -1276,6 +1259,8 @@ class Molecule(Graph):
         cython.declare(isomers=list, newIsomers=list, index=cython.int, atom=Atom)
         cython.declare(isomer=Molecule, newIsomer=Molecule, isom=Molecule)
         
+        self.setEditable()
+        
         isomers = [self]
 
         # Iterate over resonance isomers
@@ -1305,6 +1290,8 @@ class Molecule(Graph):
         cython.declare(atom=Atom, atom1=Atom, atom2=Atom, atom3=Atom, bond12=Bond, bond23=Bond)
         cython.declare(v1=Vertex, v2=Vertex)
         
+        self.setEditable()
+        
         isomers = []
 
         # Radicals
@@ -1325,10 +1312,7 @@ class Molecule(Graph):
                     for index in range(len(self.vertices)):
                         v1 = self.vertices[index]
                         v2 = isomer.vertices[index]
-                        v2.connectivity1 = v1.connectivity1
-                        v2.connectivity2 = v1.connectivity2
-                        v2.connectivity3 = v1.connectivity3
-                        v2.sortingLabel = v1.sortingLabel
+                    self.connectivity = isomer.connectivity[:,:]
                     # Restore current isomer
                     atom1.incrementRadical()
                     atom3.decrementRadical()
@@ -1347,16 +1331,18 @@ class Molecule(Graph):
         cython.declare(paths=list)
         cython.declare(atom2=Atom, atom3=Atom, bond12=Bond, bond23=Bond)
         
+        assert self.isEditable()
+        
         # No paths if atom1 is not a radical
         if atom1.radicalElectrons <= 0:
             return []
 
         # Find all delocalization paths
         paths = []
-        for atom2, bond12 in atom1.edges.items():
+        for atom2, bond12 in self.edges_dod[atom1].items():
             # Vinyl bond must be capable of gaining an order
             if bond12.isSingle() or bond12.isDouble():
-                for atom3, bond23 in atom2.edges.items():
+                for atom3, bond23 in self.edges_dod[atom2].items():
                     # Allyl bond must be capable of losing an order without breaking
                     if atom1 is not atom3 and (bond23.isDouble() or bond23.isTriple()):
                         paths.append([atom1, atom2, atom3, bond12, bond23])

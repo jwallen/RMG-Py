@@ -204,7 +204,7 @@ class TestGroupBond(unittest.TestCase):
         """
         A method called before each unit test in this class.
         """
-        self.bond = GroupBond(None, None, order=['D'])
+        self.bond = GroupBond(order=['D'])
         self.orderList = [['S'], ['D'], ['T'], ['B'], ['S','D'], ['D','S'], ['D','T'], ['S','D','T']]
     
     def testApplyActionBreakBond(self):
@@ -213,7 +213,7 @@ class TestGroupBond(unittest.TestCase):
         """
         action = ['BREAK_BOND', '*1', 'S', '*2']
         for order0 in self.orderList:
-            bond0 = GroupBond(None, None, order=order0)
+            bond0 = GroupBond(order=order0)
             bond = bond0.copy()
             try:
                 bond.applyAction(action)
@@ -227,7 +227,7 @@ class TestGroupBond(unittest.TestCase):
         """
         action = ['FORM_BOND', '*1', 'S', '*2']
         for order0 in self.orderList:
-            bond0 = GroupBond(None, None, order=order0)
+            bond0 = GroupBond(order=order0)
             bond = bond0.copy()
             try:
                 bond.applyAction(action)
@@ -241,7 +241,7 @@ class TestGroupBond(unittest.TestCase):
         """
         action = ['CHANGE_BOND', '*1', 1, '*2']
         for order0 in self.orderList:
-            bond0 = GroupBond(None, None, order=order0)
+            bond0 = GroupBond(order=order0)
             bond = bond0.copy()
             try:
                 bond.applyAction(action)
@@ -254,7 +254,7 @@ class TestGroupBond(unittest.TestCase):
         """
         action = ['CHANGE_BOND', '*1', -1, '*2']
         for order0 in self.orderList:
-            bond0 = GroupBond(None, None, order=order0)
+            bond0 = GroupBond(order=order0)
             bond = bond0.copy()
             try:
                 bond.applyAction(action)
@@ -267,7 +267,7 @@ class TestGroupBond(unittest.TestCase):
         """
         action = ['GAIN_RADICAL', '*1', 1]
         for order0 in self.orderList:
-            bond0 = GroupBond(None, None, order=order0)
+            bond0 = GroupBond(order=order0)
             bond = bond0.copy()
             try:
                 bond.applyAction(action)
@@ -281,7 +281,7 @@ class TestGroupBond(unittest.TestCase):
         """
         action = ['LOSE_RADICAL', '*1', 1]
         for order0 in self.orderList:
-            bond0 = GroupBond(None, None, order=order0)
+            bond0 = GroupBond(order=order0)
             bond = bond0.copy()
             try:
                 bond.applyAction(action)
@@ -295,8 +295,8 @@ class TestGroupBond(unittest.TestCase):
         """
         for order1 in self.orderList:
             for order2 in self.orderList:
-                bond1 = GroupBond(None, None, order=order1)
-                bond2 = GroupBond(None, None, order=order2)
+                bond1 = GroupBond(order=order1)
+                bond2 = GroupBond(order=order2)
                 if order1 == order2 or (all([o in order2 for o in order1]) and all([o in order1 for o in order2])):
                     self.assertTrue(bond1.equivalent(bond2))
                     self.assertTrue(bond2.equivalent(bond1))
@@ -310,8 +310,8 @@ class TestGroupBond(unittest.TestCase):
         """
         for order1 in self.orderList:
             for order2 in self.orderList:
-                bond1 = GroupBond(None, None, order=order1)
-                bond2 = GroupBond(None, None, order=order2)
+                bond1 = GroupBond(order=order1)
+                bond2 = GroupBond(order=order2)
                 if order1 == order2 or all([o in order2 for o in order1]):
                     self.assertTrue(bond1.isSpecificCaseOf(bond2))
                 else:
@@ -404,8 +404,8 @@ class TestGroup(unittest.TestCase):
         self.assertTrue(self.group.hasBond(atom1,atom2))
         self.assertTrue(self.group.hasBond(atom1,atom3))
         self.assertFalse(self.group.hasBond(atom2,atom3))
-        bond12 = atom1.bonds[atom2]
-        bond13 = atom1.bonds[atom3]
+        bond12 = self.group.getBond(atom1, atom2)
+        bond13 = self.group.getBond(atom1, atom3)
            
         self.assertTrue(atom1.label == '*2')
         self.assertTrue(atom1.atomType[0].label in ['Cs','Cd'])
@@ -460,12 +460,12 @@ class TestGroup(unittest.TestCase):
             self.assertTrue(atom1 in self.group.atoms)
             self.assertTrue(atom2 in group.atoms)
             self.assertTrue(atom1.equivalent(atom2))
-            for atom3 in atom1.bonds:
+            for atom3 in self.group.getBonds(atom1):
                 atom4 = result[0][atom3]
-                self.assertTrue(atom4 in atom2.bonds)
+                self.assertTrue(atom4 in group.getBonds(atom2))
                 self.assertTrue(atom3.equivalent(atom4))
-                bond1 = atom1.bonds[atom3]
-                bond2 = atom2.bonds[atom4]
+                bond1 = self.group.getBond(atom1, atom3)
+                bond2 = group.getBond(atom2, atom4)
                 self.assertTrue(bond1.equivalent(bond2))
         
     def testIsSubgraphIsomorphic(self):

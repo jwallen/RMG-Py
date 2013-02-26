@@ -76,7 +76,7 @@ class TestMoleculeSymmetry(unittest.TestCase):
         molecule = Molecule().fromSMILES('CC')
         symmetryNumber = 1
         for atom1 in molecule.atoms:
-            for atom2 in atom1.bonds:
+            for atom2 in molecule.getBonds(atom1):
                 if molecule.atoms.index(atom1) < molecule.atoms.index(atom2):
                     symmetryNumber *= calculateBondSymmetryNumber(molecule, atom1, atom2)
         self.assertEqual(symmetryNumber, 2)
@@ -88,7 +88,7 @@ class TestMoleculeSymmetry(unittest.TestCase):
         molecule = Molecule().fromSMILES('CCC')
         symmetryNumber = 1
         for atom1 in molecule.atoms:
-            for atom2 in atom1.bonds:
+            for atom2 in molecule.getBonds(atom1):
                 if molecule.atoms.index(atom1) < molecule.atoms.index(atom2):
                     symmetryNumber *= calculateBondSymmetryNumber(molecule, atom1, atom2)
         self.assertEqual(symmetryNumber, 1)
@@ -100,7 +100,7 @@ class TestMoleculeSymmetry(unittest.TestCase):
         molecule = Molecule().fromSMILES('CCCC')
         symmetryNumber = 1
         for atom1 in molecule.atoms:
-            for atom2 in atom1.bonds:
+            for atom2 in molecule.getBonds(atom1):
                 if molecule.atoms.index(atom1) < molecule.atoms.index(atom2):
                     symmetryNumber *= calculateBondSymmetryNumber(molecule, atom1, atom2)
         self.assertEqual(symmetryNumber, 2)
@@ -112,7 +112,7 @@ class TestMoleculeSymmetry(unittest.TestCase):
         molecule = Molecule().fromSMILES('C=C')
         symmetryNumber = 1
         for atom1 in molecule.atoms:
-            for atom2 in atom1.bonds:
+            for atom2 in molecule.getBonds(atom1):
                 if molecule.atoms.index(atom1) < molecule.atoms.index(atom2):
                     symmetryNumber *= calculateBondSymmetryNumber(molecule, atom1, atom2)
         self.assertEqual(symmetryNumber, 2)
@@ -124,7 +124,7 @@ class TestMoleculeSymmetry(unittest.TestCase):
         molecule = Molecule().fromSMILES('C#C')
         symmetryNumber = 1
         for atom1 in molecule.atoms:
-            for atom2 in atom1.bonds:
+            for atom2 in molecule.getBonds(atom1):
                 if molecule.atoms.index(atom1) < molecule.atoms.index(atom2):
                     symmetryNumber *= calculateBondSymmetryNumber(molecule, atom1, atom2)
         self.assertEqual(symmetryNumber, 2)

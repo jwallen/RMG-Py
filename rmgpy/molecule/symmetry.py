@@ -32,16 +32,22 @@ This module provides functionality for estimating the symmetry number of a
 molecule from its chemical graph representation.
 """
 
+import cython
+
 def calculateAtomSymmetryNumber(molecule, atom):
     """
     Return the symmetry number centered at `atom` in the structure. The
     `atom` of interest must not be in a cycle.
     """
+    cython.declare(vertices=list, edges=dict)
     symmetryNumber = 1
+    
+    vertices = molecule.vertices
+    edges = molecule.edges
 
     single = 0; double = 0; triple = 0; benzene = 0
     numNeighbors = 0
-    for bond in atom.edges.values():
+    for bond in edges[atom].values():
         if bond.isSingle(): single += 1
         elif bond.isDouble(): double += 1
         elif bond.isTriple(): triple += 1
@@ -109,7 +115,7 @@ def calculateBondSymmetryNumber(molecule, atom1, atom2):
     """
     Return the symmetry number centered at `bond` in the structure.
     """
-    bond = atom1.edges[atom2]
+    bond = molecule.getBond(atom1, atom2)
     symmetryNumber = 1
     if bond.isSingle() or bond.isDouble() or bond.isTriple():
         if atom1.equivalent(atom2):
@@ -124,9 +130,9 @@ def calculateBondSymmetryNumber(molecule, atom1, atom2):
             elif len(molecule.vertices) == 2:
                 symmetryNumber = 2
             else:
-                molecule.removeBond(bond)
+                molecule.removeBond(atom1, atom2)
                 structure = molecule.copy(True)
-                molecule.addBond(bond)
+                molecule.addBond(atom1, atom2, bond)
 
                 atom1 = structure.atoms[molecule.atoms.index(atom1)]
                 atom2 = structure.atoms[molecule.atoms.index(atom2)]
@@ -191,14 +197,17 @@ def calculateAxisSymmetryNumber(molecule):
         A/         \B      A/         
               s=2                s=2
     """
-
+    cython.declare(vertices=list, edges=dict, vertices2=list, edges2=dict)
     symmetryNumber = 1
+    
+    vertices = molecule.vertices
+    edges = molecule.edges
 
     # List all double bonds in the structure
     doubleBonds = []
-    for atom1 in molecule.vertices:
-        for atom2 in atom1.edges:
-            if atom1.edges[atom2].isDouble() and molecule.vertices.index(atom1) < molecule.vertices.index(atom2):
+    for atom1 in vertices:
+        for atom2, bond in edges[atom1].items():
+            if bond.isDouble() and vertices.index(atom1) < vertices.index(atom2):
                 doubleBonds.append((atom1, atom2))
 
     # Search for adjacent double bonds
@@ -235,7 +244,7 @@ def calculateAxisSymmetryNumber(molecule):
         # Do nothing if axis is in cycle
         found = False
         for atom1, atom2 in bonds:
-           if molecule.isBondInCycle(atom1.edges[atom2]): found = True
+           if molecule.isBondInCycle(atom1, atom2): found = True
         if found: continue
 
         # Find terminal atoms in axis
@@ -250,17 +259,20 @@ def calculateAxisSymmetryNumber(molecule):
         # Remove axis from (copy of) structure
         bondlist = []
         for atom1, atom2 in bonds:
-            bond = atom1.edges[atom2]
-            bondlist.append(bond)
-            molecule.removeBond(bond)
+            bond = edges[atom1][atom2]
+            bondlist.append((atom1, atom2, bond))
+            molecule.removeBond(atom1, atom2)
         structure = molecule.copy(True)
         terminalAtoms = [structure.vertices[molecule.vertices.index(atom)] for atom in terminalAtoms]
-        for bond in bondlist:
-            molecule.addBond(bond)
+        for atom1, atom2, bond in bondlist:
+            molecule.addBond(atom1, atom2, bond)
         
+        vertices2 = structure.vertices
+        edges2 = structure.edges
+
         atomsToRemove = []
-        for atom in structure.vertices:
-            if len(atom.edges) == 0 and atom not in terminalAtoms: # it's not bonded to anything
+        for atom in vertices2:
+            if len(edges2[atom]) == 0 and atom not in terminalAtoms: # it's not bonded to anything
                 atomsToRemove.append(atom)
         for atom in atomsToRemove: structure.removeAtom(atom)
 
@@ -344,7 +356,7 @@ def calculateCyclicSymmetryNumber(molecule):
         for i, atom1 in enumerate(ring):
             for atom2 in ring[i+1:]:
                 if structure.hasBond(atom1, atom2):
-                    structure.removeBond(atom1.edges[atom2])
+                    structure.removeBond(atom1, atom2)
 
         structures = structure.split()
         groups = []
@@ -419,14 +431,19 @@ def calculateSymmetryNumber(molecule):
     includes both external and internal modes.
     """
     symmetryNumber = 1
+    
+    molecule.setEditable()
+    
+    atoms = molecule.vertices
+    bonds = molecule.edges
 
-    for atom in molecule.vertices:
+    for atom in atoms:
         if not molecule.isAtomInCycle(atom):
             symmetryNumber *= calculateAtomSymmetryNumber(molecule, atom)
 
-    for atom1 in molecule.vertices:
-        for atom2 in atom1.edges:
-            if molecule.vertices.index(atom1) < molecule.vertices.index(atom2) and not molecule.isBondInCycle(atom1.edges[atom2]):
+    for atom1 in atoms:
+        for atom2 in bonds[atom1]:
+            if atoms.index(atom1) < atoms.index(atom2) and not molecule.isBondInCycle(atom1, atom2):
                 symmetryNumber *= calculateBondSymmetryNumber(molecule, atom1, atom2)
 
     symmetryNumber *= calculateAxisSymmetryNumber(molecule)

@@ -257,7 +257,7 @@ class TestBond(unittest.TestCase):
         """
         A method called before each unit test in this class.
         """
-        self.bond = Bond(atom1=None, atom2=None, order='D')
+        self.bond = Bond(order='D')
         self.orderList = ['S','D','T','B']
     
     def testIsSingle(self):
@@ -265,7 +265,7 @@ class TestBond(unittest.TestCase):
         Test the Bond.isSingle() method.
         """
         for order in self.orderList:
-            bond = Bond(None, None, order=order)
+            bond = Bond(order=order)
             if order == 'S':
                 self.assertTrue(bond.isSingle())
             else:
@@ -276,7 +276,7 @@ class TestBond(unittest.TestCase):
         Test the Bond.isDouble() method.
         """
         for order in self.orderList:
-            bond = Bond(None, None, order=order)
+            bond = Bond(order=order)
             if order == 'D':
                 self.assertTrue(bond.isDouble())
             else:
@@ -287,7 +287,7 @@ class TestBond(unittest.TestCase):
         Test the Bond.isTriple() method.
         """
         for order in self.orderList:
-            bond = Bond(None, None, order=order)
+            bond = Bond(order=order)
             if order == 'T':
                 self.assertTrue(bond.isTriple())
             else:
@@ -298,7 +298,7 @@ class TestBond(unittest.TestCase):
         Test the Bond.isBenzene() method.
         """
         for order in self.orderList:
-            bond = Bond(None, None, order=order)
+            bond = Bond(order=order)
             if order == 'B':
                 self.assertTrue(bond.isBenzene())
             else:
@@ -309,7 +309,7 @@ class TestBond(unittest.TestCase):
         Test the Bond.incrementOrder() method.
         """
         for order in self.orderList:
-            bond = Bond(None, None, order=order)
+            bond = Bond(order=order)
             try:
                 bond.incrementOrder()
                 if order == 'S': 
@@ -324,7 +324,7 @@ class TestBond(unittest.TestCase):
         Test the Bond.decrementOrder() method.
         """
         for order in self.orderList:
-            bond = Bond(None, None, order=order)
+            bond = Bond(order=order)
             try:
                 bond.decrementOrder()
                 if order == 'D': 
@@ -340,7 +340,7 @@ class TestBond(unittest.TestCase):
         """
         action = ['BREAK_BOND', '*1', 'S', '*2']
         for order0 in self.orderList:
-            bond0 = Bond(None, None, order=order0)
+            bond0 = Bond(order=order0)
             bond = bond0.copy()
             try:
                 bond.applyAction(action)
@@ -354,7 +354,7 @@ class TestBond(unittest.TestCase):
         """
         action = ['FORM_BOND', '*1', 'S', '*2']
         for order0 in self.orderList:
-            bond0 = Bond(None, None, order=order0)
+            bond0 = Bond(order=order0)
             bond = bond0.copy()
             try:
                 bond.applyAction(action)
@@ -368,7 +368,7 @@ class TestBond(unittest.TestCase):
         """
         action = ['CHANGE_BOND', '*1', 1, '*2']
         for order0 in self.orderList:
-            bond0 = Bond(None, None, order=order0)
+            bond0 = Bond(order=order0)
             bond = bond0.copy()
             try:
                 bond.applyAction(action)
@@ -381,7 +381,7 @@ class TestBond(unittest.TestCase):
         """
         action = ['CHANGE_BOND', '*1', -1, '*2']
         for order0 in self.orderList:
-            bond0 = Bond(None, None, order=order0)
+            bond0 = Bond(order=order0)
             bond = bond0.copy()
             try:
                 bond.applyAction(action)
@@ -394,7 +394,7 @@ class TestBond(unittest.TestCase):
         """
         action = ['GAIN_RADICAL', '*1', 1]
         for order0 in self.orderList:
-            bond0 = Bond(None, None, order=order0)
+            bond0 = Bond(order=order0)
             bond = bond0.copy()
             try:
                 bond.applyAction(action)
@@ -408,7 +408,7 @@ class TestBond(unittest.TestCase):
         """
         action = ['LOSE_RADICAL', '*1', 1]
         for order0 in self.orderList:
-            bond0 = Bond(None, None, order=order0)
+            bond0 = Bond(order=order0)
             bond = bond0.copy()
             try:
                 bond.applyAction(action)
@@ -422,8 +422,8 @@ class TestBond(unittest.TestCase):
         """
         for order1 in self.orderList:
             for order2 in self.orderList:
-                bond1 = Bond(None, None, order=order1)
-                bond2 = Bond(None, None, order=order2)
+                bond1 = Bond(order=order1)
+                bond2 = Bond(order=order2)
                 if order1 == order2:
                     self.assertTrue(bond1.equivalent(bond2))
                     self.assertTrue(bond2.equivalent(bond1))
@@ -437,8 +437,8 @@ class TestBond(unittest.TestCase):
         """
         for order1 in self.orderList:
             for order2 in self.orderList:
-                bond1 = Bond(None, None, order=order1)
-                bond2 = Bond(None, None, order=order2)
+                bond1 = Bond(order=order1)
+                bond2 = Bond(order=order2)
                 if order1 == order2:
                     self.assertTrue(bond1.isSpecificCaseOf(bond2))
                 else:
@@ -541,8 +541,8 @@ class TestMolecule(unittest.TestCase):
         self.assertTrue(self.molecule.hasBond(atom1,atom2))
         self.assertTrue(self.molecule.hasBond(atom1,atom3))
         self.assertFalse(self.molecule.hasBond(atom2,atom3))
-        bond12 = atom1.bonds[atom2]
-        bond13 = atom1.bonds[atom3]
+        bond12 = self.molecule.getBond(atom1, atom2)
+        bond13 = self.molecule.getBond(atom1, atom3)
            
         self.assertTrue(atom1.label == '*2')
         self.assertTrue(atom1.element.symbol == 'C')
@@ -665,9 +665,8 @@ class TestMolecule(unittest.TestCase):
         for label,atom1 in labeled1.iteritems():
             initialMap[atom1] = labeled2[label]
         self.assertTrue(molecule.isSubgraphIsomorphic(group, initialMap))
-
         mapping = molecule.findSubgraphIsomorphisms(group, initialMap)
-        self.assertTrue(len(mapping) == 1)
+        self.assertEqual(len(mapping), 6)
         for map in mapping:
             self.assertTrue(len(map) == min(len(molecule.atoms), len(group.atoms)))
             for key, value in map.iteritems():
@@ -709,8 +708,8 @@ class TestMolecule(unittest.TestCase):
         for atom in molecule.atoms:
             self.assertFalse(molecule.isAtomInCycle(atom))
         for atom1 in molecule.atoms:
-            for atom2, bond in atom1.bonds.items():
-                self.assertFalse(molecule.isBondInCycle(bond))
+            for atom2, bond in molecule.getBonds(atom1).items():
+                self.assertFalse(molecule.isBondInCycle(atom1, atom2))
 
     def testIsInCycleCyclohexane(self):
         """
@@ -723,11 +722,11 @@ class TestMolecule(unittest.TestCase):
             elif atom.isCarbon():
                 self.assertTrue(molecule.isAtomInCycle(atom))
         for atom1 in molecule.atoms:
-            for atom2, bond in atom1.bonds.items():
+            for atom2, bond in molecule.getBonds(atom1).items():
                 if atom1.isCarbon() and atom2.isCarbon():
-                    self.assertTrue(molecule.isBondInCycle(bond))
+                    self.assertTrue(molecule.isBondInCycle(atom1, atom2))
                 else:
-                    self.assertFalse(molecule.isBondInCycle(bond))
+                    self.assertFalse(molecule.isBondInCycle(atom1, atom2))
         
     def testFromSMILESH(self):
         """

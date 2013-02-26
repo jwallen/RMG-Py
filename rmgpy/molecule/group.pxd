@@ -84,7 +84,7 @@ cdef class Group(Graph):
 
     cpdef addAtom(self, GroupAtom atom)
 
-    cpdef addBond(self, GroupBond bond)
+    cpdef addBond(self, GroupAtom atom1, GroupAtom atom2, GroupBond bond)
 
     cpdef dict getBonds(self, GroupAtom atom)
 
@@ -96,7 +96,7 @@ cdef class Group(Graph):
 
     cpdef removeAtom(self, GroupAtom atom)
 
-    cpdef removeBond(self, GroupBond bond)
+    cpdef removeBond(self, GroupAtom atom1, GroupAtom atom2)
 
     cpdef sortAtoms(self)
 

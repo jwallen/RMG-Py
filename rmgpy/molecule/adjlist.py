@@ -186,22 +186,26 @@ def fromAdjacencyList(adjlist, group=False):
         # Convert bonddict to use Atom[group] and Bond[group] objects
         atomkeys = atomdict.keys()
         atomkeys.sort()
+        bonds0 = bonds; bonds = {}
         for aid1 in atomkeys:
-            atomkeys2 = bonds[aid1].keys()
+            atom1 = atomdict[aid1]
+            bonds[atom1] = {}
+        for aid1 in atomkeys:
+            atomkeys2 = bonds0[aid1].keys()
             atomkeys2.sort()
+            atom1 = atomdict[aid1]
             for aid2 in atomkeys2:
                 if aid1 < aid2:
-                    atom1 = atomdict[aid1]
                     atom2 = atomdict[aid2]
-                    order = bonds[aid1][aid2]
+                    order = bonds0[aid1][aid2]
                     if group:
-                        bond = GroupBond(atom1, atom2, order)
+                        bond = GroupBond(order)
                     elif len(order) == 1:
-                        bond = Bond(atom1, atom2, order[0])
+                        bond = Bond(order[0])
                     else:
                         raise InvalidAdjacencyListError('Multiple bond orders specified for an atom in a Molecule.')
-                    atom1.edges[atom2] = bond
-                    atom2.edges[atom1] = bond
+                    bonds[atom1][atom2] = bond
+                    bonds[atom2][atom1] = bond
         
         # Add explicit hydrogen atoms to complete structure if desired
         if not group:
@@ -215,22 +219,22 @@ def fromAdjacencyList(adjlist, group=False):
                     raise InvalidAdjacencyListError('Cannot add hydrogens to adjacency list: Unknown valence for atom "{0}".'.format(atom.symbol))
                 radical = atom.radicalElectrons
                 order = 0
-                for atom2, bond in atom.bonds.items():
+                for atom2, bond in bonds[atom].items():
                     order += orders[bond.order]
                 count = valence - radical - int(order)
                 for i in range(count):
                     a = Atom('H', 0, 1, 0, '')
-                    b = Bond(atom, a, 'S')
+                    b = Bond('S')
                     newAtoms.append(a)
-                    atom.bonds[a] = b
-                    a.bonds[atom] = b
+                    bonds[atom][a] = b
+                    bonds[a] = {atom: b}
             atoms.extend(newAtoms)
     
     except InvalidAdjacencyListError:
         print adjlist
         raise
     
-    return atoms
+    return atoms, bonds
 
 ################################################################################
 
@@ -257,7 +261,7 @@ def getElectronState(radicalElectrons, spinMultiplicity):
         raise ValueError('Unable to determine electron state for {0:d} radical electrons with spin multiplicity of {1:d}.'.format(radicalElectrons, spinMultiplicity))
     return electronState
 
-def toAdjacencyList(atoms, label=None, group=False, removeH=False):
+def toAdjacencyList(atoms, bonds, label=None, group=False, removeH=False):
     """
     Convert a chemical graph defined by a list of `atoms` into a string
     adjacency list.
@@ -324,14 +328,14 @@ def toAdjacencyList(atoms, label=None, group=False, removeH=False):
         adjlist += '{0:<{1:d}}'.format(atomElectronStates[atom], atomElectronStateWidth)
         
         # Bonds list
-        atoms2 = atom.bonds.keys()
+        atoms2 = bonds[atom].keys()
         # sort them the same way as the atoms
         atoms2.sort(key=atoms.index)
 
         for atom2 in atoms2:
             if atom2 not in atomNumbers: continue
 
-            bond = atom.bonds[atom2]
+            bond = bonds[atom][atom2]
             adjlist += ' {{{0},'.format(atomNumbers[atom2])
 
             # Bond type(s)

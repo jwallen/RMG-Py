@@ -191,7 +191,7 @@ class MoleculeDrawer:
             if atom.isHydrogen() and atom.label == '': atomsToRemove.append(atom)
         if len(atomsToRemove) < len(self.molecule.atoms):
             for atom in atomsToRemove:
-                for atom2 in atom.bonds:
+                for atom2 in self.molecule.bonds[atom]:
                     try:
                         self.implicitHydrogens[atom2] += 1
                     except KeyError:
@@ -398,7 +398,7 @@ class MoleculeDrawer:
         atoms are present, then we define the backbone only in terms of them.
         """
         # Find the terminal atoms - those that only have one explicit bond
-        terminalAtoms = [atom for atom in self.molecule.atoms if len(atom.bonds) == 1]
+        terminalAtoms = [atom for atom in self.molecule.atoms if len(self.molecule.bonds[atom]) == 1]
         assert len(terminalAtoms) >= 2
         
         # Starting from each terminal atom, find the longest straight path to
@@ -439,7 +439,7 @@ class MoleculeDrawer:
         """
         atom1 = atoms0[-1]
         paths = []
-        for atom2 in atom1.bonds:
+        for atom2 in self.molecule.bonds[atom1]:
             if atom2 not in atoms0:
                 atoms = atoms0[:]
                 atoms.append(atom2)
@@ -595,7 +595,7 @@ class MoleculeDrawer:
         # Second atom goes on x-axis (for now; this could be improved!)
         index1 = self.molecule.atoms.index(atoms[1])
         vector = numpy.array([1.0, 0.0], numpy.float64)
-        if atoms[0].bonds[atoms[1]].isTriple():
+        if self.molecule.bonds[atoms[0]][atoms[1]].isTriple():
             rotatePositive = False
         else:
             rotatePositive = True
@@ -611,10 +611,10 @@ class MoleculeDrawer:
             atom2 = atoms[i]
             index1 = self.molecule.atoms.index(atom1)
             index2 = self.molecule.atoms.index(atom2)
-            bond0 = atom0.bonds[atom1]
-            bond = atom1.bonds[atom2]
+            bond0 = self.molecule.bonds[atom0][atom1]
+            bond = self.molecule.bonds[atom1][atom2]
             # Angle of next bond depends on the number of bonds to the start atom
-            numBonds = len(atom1.bonds)
+            numBonds = len(self.molecule.bonds[atom1])
             if numBonds == 2:
                 if (bond0.isTriple() or bond.isTriple()) or (bond0.isDouble() and bond.isDouble()):
                     # Rotate by 0 degrees towards horizontal axis (to get angle of 180)
@@ -654,10 +654,12 @@ class MoleculeDrawer:
             atom0 = backbone[i]
             index0 = atoms.index(atom0)
     
+            bonds0 = self.molecule.bonds[atom0]
+    
             # Determine bond angles of all previously-determined bond locations for
             # this atom
             bondAngles = []
-            for atom1 in atom0.bonds:
+            for atom1 in bonds0:
                 index1 = atoms.index(atom1)
                 if atom1 in backbone:
                     vector = coordinates[index1,:] - coordinates[index0,:]
@@ -665,10 +667,10 @@ class MoleculeDrawer:
                     bondAngles.append(angle)
             bondAngles.sort()
             
-            bestAngle = 2 * math.pi / len(atom0.bonds)
+            bestAngle = 2 * math.pi / len(bonds0)
             regular = True
             for angle1, angle2 in zip(bondAngles[0:-1], bondAngles[1:]):
-                if all([abs(angle2 - angle1 - (i+1) * bestAngle) > 1e-4 for i in range(len(atom0.bonds))]):
+                if all([abs(angle2 - angle1 - (i+1) * bestAngle) > 1e-4 for i in range(len(bonds0))]):
                     regular = False
     
             if regular:
@@ -679,7 +681,7 @@ class MoleculeDrawer:
                 rot = numpy.array([[math.cos(bestAngle), -math.sin(bestAngle)], [math.sin(bestAngle), math.cos(bestAngle)]], numpy.float64)
                 # Determine the vector of any currently-existing bond from this atom
                 vector = None
-                for atom1 in atom0.bonds:
+                for atom1 in bonds0:
                     index1 = atoms.index(atom1)
                     if atom1 in backbone or numpy.linalg.norm(coordinates[index1,:]) > 1e-4:
                         vector = coordinates[index1,:] - coordinates[index0,:]
@@ -687,14 +689,14 @@ class MoleculeDrawer:
                 # Iterate through each neighboring atom to this backbone atom
                 # If the neighbor is not in the backbone and does not yet have
                 # coordinates, then we need to determine coordinates for it
-                for atom1 in atom0.bonds:
+                for atom1 in bonds0:
                     if atom1 not in backbone and numpy.linalg.norm(coordinates[atoms.index(atom1),:]) < 1e-4:
                         occupied = True; count = 0
                         # Rotate vector until we find an unoccupied location
-                        while occupied and count < len(atom0.bonds):
+                        while occupied and count < len(bonds0):
                             count += 1; occupied = False
                             vector = numpy.dot(rot, vector)
-                            for atom2 in atom0.bonds:
+                            for atom2 in bonds0:
                                 index2 = atoms.index(atom2)
                                 if numpy.linalg.norm(coordinates[index2,:] - coordinates[index0,:] - vector) < 1e-4:
                                     occupied = True
@@ -709,10 +711,10 @@ class MoleculeDrawer:
                 endAngle = min(bondAngles)
                 if 0.0 < endAngle - startAngle < math.pi: endAngle += 2 * math.pi
                 elif 0.0 > endAngle - startAngle > -math.pi: startAngle -= 2 * math.pi
-                dAngle = (endAngle - startAngle) / (len(atom0.bonds) - len(bondAngles) + 1)
+                dAngle = (endAngle - startAngle) / (len(bonds0) - len(bondAngles) + 1)
                 
                 index = 1
-                for atom1 in atom0.bonds:
+                for atom1 in bonds0:
                     if atom1 not in backbone and numpy.linalg.norm(coordinates[atoms.index(atom1),:]) < 1e-4:
                         angle = startAngle + index * dAngle
                         index += 1
@@ -731,10 +733,12 @@ class MoleculeDrawer:
         coordinates for each atom to be drawn. This function is designed to be
         recursive.
         """
-    
+        
         atoms = self.molecule.atoms
         coordinates = self.coordinates
-
+        bonds0 = self.molecule.bonds[atom0]
+        bonds1 = self.molecule.bonds[atom1]
+        
         index0 = atoms.index(atom0)
         index1 = atoms.index(atom1)
     
@@ -785,12 +789,12 @@ class MoleculeDrawer:
             
         else:
             # atom1 is not in any rings, so we can continue as normal
-    
+            
             # Determine rotation angle and matrix
-            numBonds = len(atom1.bonds)
+            numBonds = len(bonds1)
             angle = 0.0
             if numBonds == 2:
-                bond0, bond = atom1.bonds.values()
+                bond0, bond = bonds1.values()
                 if (bond0.isTriple() or bond.isTriple()) or (bond0.isDouble() and bond.isDouble()):
                     angle = math.pi
                 else:
@@ -812,14 +816,14 @@ class MoleculeDrawer:
             # Iterate through each neighboring atom to this backbone atom
             # If the neighbor is not in the backbone, then we need to determine
             # coordinates for it
-            for atom, bond in atom1.bonds.iteritems():
+            for atom, bond in bonds1.iteritems():
                 if atom is not atom0:
                     occupied = True; count = 0
                     # Rotate vector until we find an unoccupied location
-                    while occupied and count < len(atom1.bonds):
+                    while occupied and count < len(bonds1):
                         count += 1; occupied = False
                         vector = numpy.dot(rot, vector)
-                        for atom2 in atom1.bonds:
+                        for atom2 in bonds1:
                             index2 = atoms.index(atom2)
                             if numpy.linalg.norm(coordinates[index2,:] - coordinates[index1,:] - vector) < 1e-4:
                                 occupied = True
@@ -842,14 +846,14 @@ class MoleculeDrawer:
         for i in range(len(symbols)):
             # Don't label carbon atoms, unless there are only one or two heavy atoms
             if symbols[i] == 'C' and len(symbols) > 2:
-                if len(atoms[i].bonds) > 1 or (atoms[i].radicalElectrons == 0 and atoms[i].charge == 0):
+                if len(self.molecule.bonds[atoms[i]]) > 1 or (atoms[i].radicalElectrons == 0 and atoms[i].charge == 0):
                     symbols[i] = ''
         # Do label atoms that have only double bonds to one or more labeled atoms
         changed = True
         while changed:
             changed = False
             for i in range(len(symbols)):
-                if symbols[i] == '' and all([(bond.isDouble() or bond.isTriple()) for bond in atoms[i].bonds.values()]) and any([symbols[atoms.index(atom)] != '' for atom in atoms[i].bonds]):
+                if symbols[i] == '' and all([(bond.isDouble() or bond.isTriple()) for bond in self.molecule.bonds[atoms[i]].values()]) and any([symbols[atoms.index(atom)] != '' for atom in self.molecule.bonds[atoms[i]]]):
                     symbols[i] = atoms[i].symbol
                     changed = True
         # Add implicit hydrogens
@@ -891,7 +895,7 @@ class MoleculeDrawer:
         
         # Draw bonds
         for atom1 in atoms:
-            for atom2, bond in atom1.bonds.items():
+            for atom2, bond in self.molecule.bonds[atom1].items():
                 index1 = atoms.index(atom1)
                 index2 = atoms.index(atom2)
                 if index1 < index2: # So we only draw each bond once
@@ -901,8 +905,8 @@ class MoleculeDrawer:
         for cycle in self.cycles:
             cycleBonds = []
             for atom1, atom2 in zip(cycle[0:-1], cycle[1:]):
-                cycleBonds.append(atom1.bonds[atom2])
-            cycleBonds.append(cycle[0].bonds[cycle[-1]])
+                cycleBonds.append(self.molecule.bonds[atom1][atom2])
+            cycleBonds.append(self.molecule.bonds[cycle[0]][cycle[-1]])
             if all([bond.isBenzene() for bond in cycleBonds]):
                 # We've found an aromatic ring, so draw a circle in the center to represent the benzene bonds
                 center = numpy.zeros(2, numpy.float64)
@@ -928,7 +932,7 @@ class MoleculeDrawer:
             index = atoms.index(atom)
             x0, y0 = coordinates[index,:]
             vector = numpy.zeros(2, numpy.float64)
-            for atom2 in atom.bonds:
+            for atom2 in self.molecule.bonds[atom]:
                 vector += coordinates[atoms.index(atom2),:] - coordinates[index,:]
             heavyFirst = vector[0] <= 0
             if len(atoms) == 1 and atoms[0].symbol not in ['C', 'N'] and atoms[0].charge == 0 and atoms[0].radicalElectrons == 0:
@@ -1116,13 +1120,13 @@ class MoleculeDrawer:
         # These will be placed either horizontally along the top or bottom of the
         # atom or vertically along the left or right of the atom
         orientation = ' '
-        if len(atom.bonds) == 0:
+        if len(self.molecule.bonds[atom]) == 0:
             if len(symbol) == 1:  orientation = 'r'
             else:                 orientation = 'l'
-        elif len(atom.bonds) == 1:
+        elif len(self.molecule.bonds[atom]) == 1:
             # Terminal atom - we require a horizontal arrangement if there are
             # more than just the heavy atom
-            atom1 = atom.bonds.keys()[0]
+            atom1 = self.molecule.bonds[atom].keys()[0]
             vector = self.coordinates[atoms.index(atom),:] - self.coordinates[atoms.index(atom1),:]
             if len(symbol) <= 1:
                 angle = math.atan2(vector[1], vector[0])
@@ -1140,12 +1144,12 @@ class MoleculeDrawer:
             # First try to see if there is a "preferred" side on which to place the
             # radical/charge data, i.e. if the bonds are unbalanced
             vector = numpy.zeros(2, numpy.float64)
-            for atom1 in atom.bonds:
+            for atom1 in self.molecule.bonds[atom]:
                 vector += self.coordinates[atoms.index(atom),:] - self.coordinates[atoms.index(atom1),:]
             if numpy.linalg.norm(vector) < 1e-4:
                 # All of the bonds are balanced, so we'll need to be more shrewd
                 angles = []
-                for atom1 in atom.bonds:
+                for atom1 in self.molecule.bonds[atom]:
                     vector = self.coordinates[atoms.index(atom1),:] - self.coordinates[atoms.index(atom),:]
                     angles.append(math.atan2(vector[1], vector[0]))
                 # Try one more time to see if we can use one of the four sides

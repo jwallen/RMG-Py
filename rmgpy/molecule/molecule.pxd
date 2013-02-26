@@ -95,7 +95,7 @@ cdef class Molecule(Graph):
     
     cpdef addAtom(self, Atom atom)
 
-    cpdef addBond(self, Bond bond)
+    cpdef addBond(self, Atom atom1, Atom atom2, Bond bond)
 
     cpdef dict getBonds(self, Atom atom)
 
@@ -107,7 +107,7 @@ cdef class Molecule(Graph):
 
     cpdef removeAtom(self, Atom atom)
 
-    cpdef removeBond(self, Bond bond)
+    cpdef removeBond(self, Atom atom1, Atom atom2)
 
     cpdef sortAtoms(self)
 
@@ -141,7 +141,7 @@ cdef class Molecule(Graph):
 
     cpdef bint isAtomInCycle(self, Atom atom) except -2
 
-    cpdef bint isBondInCycle(self, Bond bond) except -2
+    cpdef bint isBondInCycle(self, Atom atom1, Atom atom2) except -2
 
     cpdef draw(self, str path)
 
