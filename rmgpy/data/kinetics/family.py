@@ -229,15 +229,15 @@ class ReactionRecipe:
                         atom2.applyAction(['CHANGE_BOND', label1, -info, label2])
                         bond.applyAction(['CHANGE_BOND', label1, -info, label2])
                 elif (action[0] == 'FORM_BOND' and doForward) or (action[0] == 'BREAK_BOND' and not doForward):
-                    bond = GroupBond(atom1, atom2, order=['S']) if pattern else Bond(atom1, atom2, order='S')
-                    struct.addBond(bond)
+                    bond = GroupBond(order=['S']) if pattern else Bond(order='S')
+                    struct.addBond(atom1, atom2, bond)
                     atom1.applyAction(['FORM_BOND', label1, info, label2])
                     atom2.applyAction(['FORM_BOND', label1, info, label2])
                 elif (action[0] == 'BREAK_BOND' and doForward) or (action[0] == 'FORM_BOND' and not doForward):
                     if not struct.hasBond(atom1, atom2):
                         raise InvalidActionError('Attempted to remove a nonexistent bond.')
                     bond = struct.getBond(atom1, atom2)
-                    struct.removeBond(bond)
+                    struct.removeBond(atom1, atom2)
                     atom1.applyAction(['BREAK_BOND', label1, info, label2])
                     atom2.applyAction(['BREAK_BOND', label1, info, label2])
 

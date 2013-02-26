@@ -732,9 +732,9 @@ class ThermoDatabase(object):
             for atom in saturatedStruct.atoms:
                 for i in range(atom.radicalElectrons):
                     H = Atom('H')
-                    bond = Bond(atom, H, 'S')
+                    bond = Bond('S')
                     saturatedStruct.addAtom(H)
-                    saturatedStruct.addBond(bond)
+                    saturatedStruct.addBond(atom, H, bond)
                     if atom not in added:
                         added[atom] = []
                     added[atom].append([H, bond])
@@ -761,7 +761,7 @@ class ThermoDatabase(object):
 
                 # Remove the added hydrogen atoms and bond and restore the radical
                 for H, bond in added[atom]:
-                    saturatedStruct.removeBond(bond)
+                    saturatedStruct.removeBond(atom, H)
                     saturatedStruct.removeAtom(H)
                     atom.incrementRadical()
 
@@ -775,10 +775,12 @@ class ThermoDatabase(object):
                     logging.error(molecule.toAdjacencyList())
                     raise
                         
+                saturatedStruct.setEditable()
+                
                 # Re-saturate
                 for H, bond in added[atom]:
                     saturatedStruct.addAtom(H)
-                    saturatedStruct.addBond(bond)
+                    saturatedStruct.addBond(atom, H, bond)
                     atom.decrementRadical()
 
                 # Subtract the enthalpy of the added hydrogens
@@ -830,6 +832,7 @@ class ThermoDatabase(object):
                         raise
                 else:
                     rings = molecule.getSmallestSetOfSmallestRings()
+                    molecule.setTraversable()
                     for ring in rings:
                         # Make a temporary structure containing only the atoms in the ring
                         # NB. if any of the ring corrections depend on ligands not in the ring, they will not be found!
