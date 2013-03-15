@@ -181,6 +181,7 @@ class MoleculeDrawer:
         
         # Make a copy of the molecule so we don't modify the original
         self.molecule = molecule.copy(deep=True)
+        self.molecule.makeHydrogensExplicit()
         
         # Remove all unlabeled hydrogen atoms from the copied atoms and bonds, as
         # they are not drawn

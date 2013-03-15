@@ -105,6 +105,7 @@ class Atom(Vertex):
             'connectivity2': self.connectivity2,
             'connectivity3': self.connectivity3,
             'sortingLabel': self.sortingLabel,
+            'implicitHydrogens': self.implicitHydrogens,
             'atomType': self.atomType.label if self.atomType else None,
         }
         return (Atom, (self.element.symbol, self.radicalElectrons, self.spinMultiplicity, self.charge, self.label), d)
@@ -118,6 +119,7 @@ class Atom(Vertex):
         self.connectivity2 = d['connectivity2']
         self.connectivity3 = d['connectivity3']
         self.sortingLabel = d['sortingLabel']
+        self.implicitHydrogens = d['implicitHydrogens']
         self.atomType = atomTypes[d['atomType']] if d['atomType'] else None
     
     @property
@@ -146,9 +148,11 @@ class Atom(Vertex):
             return (self.element is atom.element and
                 self.radicalElectrons == atom.radicalElectrons and
                 self.spinMultiplicity == atom.spinMultiplicity and
-                self.charge == atom.charge)
+                self.charge == atom.charge and
+                self.implicitHydrogens == atom.implicitHydrogens)
         elif isinstance(other, GroupAtom):
             cython.declare(a=AtomType, radical=cython.short, spin=cython.short, charge=cython.short)
+            assert(self.implicitHydrogens == 0)
             ap = other
             for a in ap.atomType:
                 if self.atomType.equivalent(a): break
@@ -176,6 +180,7 @@ class Atom(Vertex):
             return self.equivalent(other)
         elif isinstance(other, GroupAtom):
             cython.declare(atom=GroupAtom, a=AtomType, radical=cython.short, spin=cython.short, charge=cython.short, index=cython.int)
+            assert(self.implicitHydrogens == 0)
             atom = other
             for a in atom.atomType: 
                 if self.atomType.isSpecificCaseOf(a): break
@@ -207,6 +212,7 @@ class Atom(Vertex):
         a.radicalElectrons = self.radicalElectrons
         a.spinMultiplicity = self.spinMultiplicity
         a.charge = self.charge
+        a.implicitHydrogens = self.implicitHydrogens
         a.label = self.label
         a.atomType = self.atomType
         return a
@@ -482,6 +488,7 @@ class Molecule(Graph):
         Graph.__init__(self, atoms)
         self.symmetryNumber = symmetry
         self._fingerprint = None
+        self.implicitHydrogens = False
         if SMILES != '': self.fromSMILES(SMILES)
         elif InChI != '': self.fromInChI(InChI)
     
@@ -586,6 +593,7 @@ class Molecule(Graph):
         for atom in self.vertices:
             symbol = atom.element.symbol
             elements[symbol] = elements.get(symbol, 0) + 1
+            elements['H'] = elements.get('H', 0) + atom.implicitHydrogens
         
         # Use the Hill system to generate the formula
         formula = ''
@@ -618,6 +626,7 @@ class Molecule(Graph):
         H = elements.getElement('H')
         for atom in self.vertices:
             mass += atom.element.mass
+            mass += H.mass * atom.implicitHydrogens
         return mass
     
     def getNumAtoms(self, element = None):
@@ -633,6 +642,9 @@ class Molecule(Graph):
             for atom in self.vertices:
                 if atom.element.symbol == element:
                     numAtoms += 1
+            if element == elements.getElement('H'):
+                for atom in self.vertices:
+                    numAtoms += atom.implicitHydrogens
             return numAtoms
 
     def getNumberOfRadicalElectrons(self):
@@ -657,6 +669,7 @@ class Molecule(Graph):
         other = cython.declare(Molecule)
         g = Graph.copy(self, deep)
         other = Molecule(g.vertices)
+        other.implicitHydrogens = self.implicitHydrogens
         return other
 
     def merge(self, other):
@@ -679,29 +692,6 @@ class Molecule(Graph):
             molecule = Molecule(atoms=g.vertices)
             molecules.append(molecule)
         return molecules
-
-    def deleteHydrogens(self):
-        """
-        Irreversibly delete all non-labeled hydrogens without updating
-        connectivity values. If there's nothing but hydrogens, it does nothing.
-        It destroys information; be careful with it.
-        """
-        cython.declare(atom=Atom, neighbor=Atom, hydrogens=list)
-        # Check that the structure contains at least one heavy atom
-        for atom in self.vertices:
-            if not atom.isHydrogen():
-                break
-        else:
-            # No heavy atoms, so leave explicit
-            return
-        hydrogens = []
-        for atom in self.vertices:
-            if atom.isHydrogen() and atom.label == '':
-                neighbor = atom.edges.keys()[0]
-                hydrogens.append(atom)
-        # Remove the hydrogen atoms from the structure
-        for atom in hydrogens:
-            self.removeAtom(atom)
 
     def updateAtomTypes(self):
         """
@@ -782,6 +772,10 @@ class Molecule(Graph):
         if self.getFingerprint() != other.getFingerprint():
             return False
         # Do the full isomorphism comparison
+        if self.implicitHydrogens != other.implicitHydrogens:
+            # Always use implicit hydrogens for this comparison (since it's faster)
+            self.makeHydrogensImplicit()
+            other.makeHydrogensImplicit()
         result = Graph.isIsomorphic(self, other, initialMap)
         return result
 
@@ -800,6 +794,10 @@ class Molecule(Graph):
         if not isinstance(other, Molecule):
             raise TypeError('Got a {0} object for parameter "other", when a Molecule object is required.'.format(other.__class__))
         # Do the isomorphism comparison
+        if self.implicitHydrogens != other.implicitHydrogens:
+            # Always use implicit hydrogens for this comparison (since it's faster)
+            self.makeHydrogensImplicit()
+            other.makeHydrogensImplicit()
         result = Graph.findIsomorphism(self, other, initialMap)
         return result
 
@@ -840,6 +838,9 @@ class Molecule(Graph):
             return False
 
         # Do the isomorphism comparison
+        if self.implicitHydrogens:
+            # Always use explicit hydrogens for this comparison
+            self.makeHydrogensExplicit()
         result = Graph.isSubgraphIsomorphic(self, other, initialMap)
         return result
 
@@ -859,6 +860,9 @@ class Molecule(Graph):
         if not isinstance(other, Group):
             raise TypeError('Got a {0} object for parameter "other", when a Molecule object is required.'.format(other.__class__))
         # Do the isomorphism comparison
+        if self.implicitHydrogens:
+            # Always use explicit hydrogens for this comparison
+            self.makeHydrogensExplicit()
         result = Graph.findSubgraphIsomorphisms(self, other, initialMap)
         return result
 
@@ -1005,6 +1009,9 @@ class Molecule(Graph):
         self.updateConnectivityValues()
         self.updateAtomTypes()
 
+        # Use implicit hydrogens by default (since it uses less memory)
+        self.makeHydrogensImplicit()
+
         return self
 
     def fromAdjacencyList(self, adjlist):
@@ -1017,6 +1024,10 @@ class Molecule(Graph):
         self.vertices = fromAdjacencyList(adjlist, False)
         self.updateConnectivityValues()
         self.updateAtomTypes()
+        
+        # Use implicit hydrogens by default (since it uses less memory)
+        self.makeHydrogensImplicit()
+
         return self
 
     def toCML(self):
@@ -1126,6 +1137,15 @@ class Molecule(Graph):
                 if index1 < index2:
                     order = orders[bond.order]
                     obmol.AddBond(index1+1, index2+1, order)
+        index2 = len(atoms)
+        if self.implicitHydrogens:
+            for index1, atom1 in enumerate(atoms):
+                for count in range(atom1.implicitHydrogens):
+                    a = obmol.NewAtom()
+                    a.SetAtomicNum(1)
+                    a.SetFormalCharge(0)
+                    obmol.AddBond(index1+1, index2+1, order)
+                    index2 += 1
 
         obmol.AssignSpinMultiplicity(True)
 
@@ -1136,7 +1156,11 @@ class Molecule(Graph):
         Convert the molecular structure to a string adjacency list.
         """
         from .adjlist import toAdjacencyList
+        implicitH = self.implicitHydrogens
+        self.makeHydrogensExplicit()
         result = toAdjacencyList(self.vertices, label=label, group=False, removeH=removeH)
+        if implicitH:
+            self.makeHydrogensImplicit()
         return result
 
     def isLinear(self):
@@ -1144,6 +1168,7 @@ class Molecule(Graph):
         Return :data:`True` if the structure is linear and :data:`False`
         otherwise.
         """
+        self.makeHydrogensExplicit()
 
         atomCount = len(self.vertices)
 
@@ -1215,6 +1240,7 @@ class Molecule(Graph):
         bond not in a cycle and between two atoms that also have other bonds
         are considered to be internal rotors.
         """
+        self.makeHydrogensExplicit()
         count = 0
         for atom1 in self.vertices:
             for atom2, bond in atom1.edges.items():
@@ -1227,7 +1253,7 @@ class Molecule(Graph):
         """
         Return the value of the heat capacity at zero temperature in J/mol*K.
         """
-        if len(self.atoms) == 1:
+        if len(self.atoms) == 1 and not self.implicitHydrogens:
             return 2.5 * constants.R
         else:
             return (3.5 if self.isLinear() else 4.0) * constants.R
@@ -1238,7 +1264,7 @@ class Molecule(Graph):
         """
         cython.declare(Natoms=cython.int, Nvib=cython.int, Nrotors=cython.int)
         
-        if len(self.vertices) == 1:
+        if len(self.vertices) == 1 and not self.implicitHydrogens:
             return self.calculateCp0()
         else:
             
@@ -1269,12 +1295,86 @@ class Molecule(Graph):
                 return True
         return False
     
+    def makeHydrogensExplicit(self):
+        """
+        Make all of the implicit hydrogen atoms explicit, and set the
+        `implicitHydrogens` attribute of all :class:`Atom` objects to zero.
+        """
+        if not self.implicitHydrogens: return
+    
+        # For each implicit hydrogen, create a new hydrogen atom and a single
+        # bond connecting the hydrogen atom to its neighbor, then decrement
+        # the number of implicit hydrogens
+        for atom in self.vertices:
+            while atom.implicitHydrogens > 0:
+                H = Atom('H')
+                H.atomType = atomTypes['H']
+                self.addAtom(H)
+                self.addBond(Bond(atom, H, 'S'))
+                atom.implicitHydrogens -= 1
+        
+        # Record that the hydrogens are now explicit
+        self.implicitHydrogens = False
+        
+    def makeHydrogensImplicit(self):
+        """
+        Make all of the (nonlabeled) explicit hydrogen atoms explicit, and set
+        the `implicitHydrogens` attribute of all heavy :class:`Atom` objects
+        accordingly.
+        """
+        cython.declare(atom=Atom, neighbor=Atom, atomsToRemove=list)
+        
+        if self.implicitHydrogens: return
+        
+        # Find all of the hydrogen atoms in the molecule
+        atomsToRemove = []
+        for atom in self.vertices:
+            if atom.isHydrogen() and atom.label == '':
+                atomsToRemove.append(atom)
+    
+        # If all atoms in the molecule are hydrogen atoms, then do nothing
+        if len(atomsToRemove) == len(self.vertices): return
+    
+        # Increment the number of implicit hydrogens on each neighboring atom
+        # for each hydrogen that is being removed
+        for atom in atomsToRemove:
+            neighbor = atom.edges.keys()[0]
+            neighbor.implicitHydrogens += 1
+        
+        # Remove the hydrogen atoms
+        for atom in atomsToRemove:
+            self.removeVertex(atom)
+    
+        # Record that the hydrogens are now imxplicit
+        self.implicitHydrogens = True
+
+    def updateConnectivityValues(self):
+        """
+        Update the connectivity values for each vertex in the graph. These are
+        used to accelerate the isomorphism checking.
+        """
+        cython.declare(vertex1=Atom, vertex2=Atom, count=cython.short)
+        
+        for vertex1 in self.vertices:
+            count = len(vertex1.edges) + vertex1.implicitHydrogens
+            vertex1.connectivity1 = count
+        for vertex1 in self.vertices:
+            count = 0
+            for vertex2 in vertex1.edges: count += vertex2.connectivity1
+            vertex1.connectivity2 = count
+        for vertex1 in self.vertices:
+            count = 0
+            for vertex2 in vertex1.edges: count += vertex2.connectivity2
+            vertex1.connectivity3 = count
+
     def generateResonanceIsomers(self):
         """
         Generate and return all of the resonance isomers of this molecule.
         """
         cython.declare(isomers=list, newIsomers=list, index=cython.int, atom=Atom)
         cython.declare(isomer=Molecule, newIsomer=Molecule, isom=Molecule)
+        
+        self.makeHydrogensExplicit()
         
         isomers = [self]
 
@@ -1295,6 +1395,10 @@ class Molecule(Graph):
                 # Move to next resonance isomer
                 index += 1
         
+        # Use implicit hydrogens by default (to conserve memory)
+        for isomer in isomers:
+            isomer.makeHydrogensImplicit()
+        
         return isomers
 
     def getAdjacentResonanceIsomers(self):
@@ -1304,6 +1408,8 @@ class Molecule(Graph):
         cython.declare(isomers=list, paths=list, index=cython.int, isomer=Molecule)
         cython.declare(atom=Atom, atom1=Atom, atom2=Atom, atom3=Atom, bond12=Bond, bond23=Bond)
         cython.declare(v1=Vertex, v2=Vertex)
+        
+        assert(not self.implicitHydrogens)
         
         isomers = []
 
@@ -1346,6 +1452,8 @@ class Molecule(Graph):
         """
         cython.declare(paths=list)
         cython.declare(atom2=Atom, atom3=Atom, bond12=Bond, bond23=Bond)
+        
+        assert(not self.implicitHydrogens)
         
         # No paths if atom1 is not a radical
         if atom1.radicalElectrons <= 0:

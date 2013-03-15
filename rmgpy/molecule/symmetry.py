@@ -37,6 +37,8 @@ def calculateAtomSymmetryNumber(molecule, atom):
     Return the symmetry number centered at `atom` in the structure. The
     `atom` of interest must not be in a cycle.
     """
+    molecule.makeHydrogensExplicit()
+    
     symmetryNumber = 1
 
     single = 0; double = 0; triple = 0; benzene = 0
@@ -109,6 +111,8 @@ def calculateBondSymmetryNumber(molecule, atom1, atom2):
     """
     Return the symmetry number centered at `bond` in the structure.
     """
+    molecule.makeHydrogensExplicit()
+
     bond = atom1.edges[atom2]
     symmetryNumber = 1
     if bond.isSingle() or bond.isDouble() or bond.isTriple():
@@ -191,6 +195,7 @@ def calculateAxisSymmetryNumber(molecule):
         A/         \B      A/         
               s=2                s=2
     """
+    molecule.makeHydrogensExplicit()
 
     symmetryNumber = 1
 
@@ -329,6 +334,7 @@ def calculateCyclicSymmetryNumber(molecule):
     Get the symmetry number correction for cyclic regions of a molecule.
     For complicated fused rings the smallest set of smallest rings is used.
     """
+    molecule.makeHydrogensExplicit()
 
     symmetryNumber = 1
 
@@ -418,6 +424,7 @@ def calculateSymmetryNumber(molecule):
     Return the symmetry number for the structure. The symmetry number
     includes both external and internal modes.
     """
+    molecule.makeHydrogensExplicit()
     symmetryNumber = 1
 
     for atom in molecule.vertices:

@@ -38,6 +38,7 @@ cdef class Atom(Vertex):
     cdef public short radicalElectrons
     cdef public short spinMultiplicity
     cdef public short charge
+    cdef public short implicitHydrogens
     cdef public str label
     cdef public AtomType atomType
 
@@ -121,8 +122,6 @@ cdef class Molecule(Graph):
 
     cpdef Graph copy(self, bint deep=?)
 
-    cpdef deleteHydrogens(self)
-
     cpdef clearLabeledAtoms(self)
 
     cpdef bint containsLabeledAtom(self, str label) except -2
@@ -182,6 +181,12 @@ cdef class Molecule(Graph):
     cpdef updateAtomTypes(self)
     
     cpdef bint isRadical(self) except -2
+    
+    cpdef makeHydrogensExplicit(self)
+    
+    cpdef makeHydrogensImplicit(self)
+    
+    cpdef updateConnectivityValues(self)
     
     cpdef list generateResonanceIsomers(self)
     
