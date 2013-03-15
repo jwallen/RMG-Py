@@ -74,6 +74,7 @@ class TestMoleculeSymmetry(unittest.TestCase):
         Test the Molecule.calculateBondSymmetryNumber() method.
         """
         molecule = Molecule().fromSMILES('CC')
+        molecule.makeHydrogensExplicit()
         symmetryNumber = 1
         for atom1 in molecule.atoms:
             for atom2 in atom1.bonds:
@@ -86,6 +87,7 @@ class TestMoleculeSymmetry(unittest.TestCase):
         Test the Molecule.calculateBondSymmetryNumber() method.
         """
         molecule = Molecule().fromSMILES('CCC')
+        molecule.makeHydrogensExplicit()
         symmetryNumber = 1
         for atom1 in molecule.atoms:
             for atom2 in atom1.bonds:
@@ -98,6 +100,7 @@ class TestMoleculeSymmetry(unittest.TestCase):
         Test the Molecule.calculateBondSymmetryNumber() method.
         """
         molecule = Molecule().fromSMILES('CCCC')
+        molecule.makeHydrogensExplicit()
         symmetryNumber = 1
         for atom1 in molecule.atoms:
             for atom2 in atom1.bonds:
@@ -110,6 +113,7 @@ class TestMoleculeSymmetry(unittest.TestCase):
         Test the Molecule.calculateBondSymmetryNumber() method.
         """
         molecule = Molecule().fromSMILES('C=C')
+        molecule.makeHydrogensExplicit()
         symmetryNumber = 1
         for atom1 in molecule.atoms:
             for atom2 in atom1.bonds:
@@ -122,6 +126,7 @@ class TestMoleculeSymmetry(unittest.TestCase):
         Test the Molecule.calculateBondSymmetryNumber() method.
         """
         molecule = Molecule().fromSMILES('C#C')
+        molecule.makeHydrogensExplicit()
         symmetryNumber = 1
         for atom1 in molecule.atoms:
             for atom2 in atom1.bonds:
